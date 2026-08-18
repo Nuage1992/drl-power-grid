@@ -1,0 +1,30 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "DRL for Power Grid Topology Control"
+  page-navigation: true
+  search: false
+  navbar:
+    background: light
+    left:
+      - href: index.qmd
+        text: Research Overview
+  page-footer:
+    center: "Research showcase built with Quarto"
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-location: right
+    toc-depth: 2
+    smooth-scroll: true
+    code-fold: true
+    page-layout: full
+    link-external-newwindow: true
+
+execute:
+  freeze: auto
