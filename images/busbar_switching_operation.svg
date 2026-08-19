@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration of a substation busbar switching operation</title>
+  <desc id="desc">Before and after comparison showing an existing line transferred from busbar 1 to busbar 2 using existing switching equipment, without adding a new transmission line.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f9fc; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .heading { font: 700 29px Arial, sans-serif; fill: #172033; }
+      .label { font: 600 22px Arial, sans-serif; fill: #27364f; }
+      .small { font: 18px Arial, sans-serif; fill: #52627a; }
+      .note { font: 700 20px Arial, sans-serif; fill: #155e75; }
+      .bus1 { stroke: #2563eb; stroke-width: 18; stroke-linecap: round; }
+      .bus2 { stroke: #f97316; stroke-width: 18; stroke-linecap: round; }
+      .wire { stroke: #334155; stroke-width: 7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .inactive { stroke: #aeb8c6; stroke-width: 5; fill: none; stroke-dasharray: 11 11; }
+      .switch { fill: #ffffff; stroke: #334155; stroke-width: 5; }
+      .active-dot { fill: #16a34a; stroke: #ffffff; stroke-width: 4; }
+      .arrow { stroke: #0f766e; stroke-width: 7; fill: none; marker-end: url(#arrowhead); }
+      .callout { fill: #ecfeff; stroke: #06b6d4; stroke-width: 2; }
+      .warning { fill: #fff7ed; stroke: #fb923c; stroke-width: 2; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#0f766e"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1600" height="760"/>
+  <text x="800" y="48" text-anchor="middle" class="heading">Substation busbar switching: operational reconfiguration, not a new transmission line</text>
+
+  <rect x="55" y="85" width="650" height="535" rx="22" class="panel"/>
+  <rect x="895" y="85" width="650" height="535" rx="22" class="panel"/>
+
+  <text x="380" y="132" text-anchor="middle" class="heading">BEFORE SWITCHING</text>
+  <text x="1220" y="132" text-anchor="middle" class="heading">AFTER SWITCHING</text>
+
+  <!-- Left panel busbars -->
+  <line x1="145" y1="250" x2="615" y2="250" class="bus1"/>
+  <line x1="145" y1="440" x2="615" y2="440" class="bus2"/>
+  <text x="145" y="217" class="label">Busbar 1</text>
+  <text x="145" y="407" class="label">Busbar 2</text>
+
+  <!-- Left incoming line and switching path -->
+  <text x="380" y="545" text-anchor="middle" class="label">Existing transmission line</text>
+  <path d="M380 520 L380 470 L315 405 L315 295" class="wire"/>
+  <circle cx="315" cy="275" r="14" class="active-dot"/>
+  <circle cx="315" cy="250" r="11" class="switch"/>
+  <path d="M380 470 L455 395 L455 305" class="inactive"/>
+  <circle cx="455" cy="440" r="11" class="switch"/>
+  <line x1="443" y1="415" x2="468" y2="390" class="wire"/>
+  <text x="490" y="325" class="small">Path to Busbar 2 open</text>
+  <text x="85" y="300" class="small">Connected</text>
+  <rect x="160" y="570" width="440" height="36" rx="10" class="callout"/>
+  <text x="380" y="595" text-anchor="middle" class="note">Line terminal is connected to Busbar 1</text>
+
+  <!-- Center operation arrow -->
+  <path d="M735 330 C785 285 815 285 865 330" class="arrow"/>
+  <text x="800" y="245" text-anchor="middle" class="label">Switching command</text>
+  <text x="800" y="272" text-anchor="middle" class="small">open one path</text>
+  <text x="800" y="298" text-anchor="middle" class="small">close the other</text>
+
+  <!-- Right panel busbars -->
+  <line x1="985" y1="250" x2="1455" y2="250" class="bus1"/>
+  <line x1="985" y1="440" x2="1455" y2="440" class="bus2"/>
+  <text x="985" y="217" class="label">Busbar 1</text>
+  <text x="985" y="407" class="label">Busbar 2</text>
+
+  <!-- Right incoming line and switching path -->
+  <text x="1220" y="545" text-anchor="middle" class="label">Same transmission line</text>
+  <path d="M1220 520 L1220 470 L1295 405 L1295 465" class="wire"/>
+  <circle cx="1295" cy="440" r="11" class="switch"/>
+  <circle cx="1295" cy="415" r="14" class="active-dot"/>
+  <path d="M1220 470 L1155 395 L1155 295" class="inactive"/>
+  <circle cx="1155" cy="250" r="11" class="switch"/>
+  <line x1="1143" y1="295" x2="1168" y2="270" class="wire"/>
+  <text x="1190" y="325" class="small">Path to Busbar 1 open</text>
+  <text x="1370" y="475" class="small">Connected</text>
+  <rect x="1000" y="570" width="440" height="36" rx="10" class="callout"/>
+  <text x="1220" y="595" text-anchor="middle" class="note">Line terminal is transferred to Busbar 2</text>
+
+  <!-- Footer clarification -->
+  <rect x="180" y="655" width="1240" height="72" rx="16" class="warning"/>
+  <text x="800" y="686" text-anchor="middle" class="label">Simulation meaning: change the connection status of existing switching equipment</text>
+  <text x="800" y="713" text-anchor="middle" class="small">No new line is added. Real deployment requires a compatible busbar layout, controllable switches, protection, interlocks and SCADA/EMS integration.</text>
+</svg>

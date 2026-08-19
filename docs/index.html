@@ -185,11 +185,26 @@ Best DRL completion rate
 </div>
 <section id="research-question" class="level2">
 <h2 class="anchored" data-anchor-id="research-question">Research question</h2>
-<p>Power generation and load demand vary over time, which can create highly loaded operating conditions. The central question in this work is:</p>
+<p>Power generation and load demand vary over time, which can create highly loaded operating conditions.</p>
+<section id="conceptual-correction-market-redispatch-is-not-topology-control" class="level3">
+<h3 class="anchored" data-anchor-id="conceptual-correction-market-redispatch-is-not-topology-control">Conceptual correction: market redispatch is not topology control</h3>
+<p>An initial assumption was that PJM congestion management and substation topology control were the same process. <strong>That assumption was incorrect.</strong> PJM primarily uses security-constrained generation redispatch, which changes nodal power injections while normally retaining the network topology. In contrast, this study changes busbar connections while the agent does not directly control generation or demand. Both approaches redistribute line flows, but through different control variables. Machine learning and DRL are decision-making tools, not the research problem.</p>
+<p>The fundamental research question is therefore:</p>
 <blockquote class="blockquote">
-<p><strong>Can a reinforcement-learning agent use topology reconfiguration to reduce line overloads and prevent blackouts while remaining fast enough for online decision making?</strong></p>
+<p><strong>To what extent can substation topology reconfiguration mitigate transmission-line overloads and maintain secure operation under time-varying generation and demand, without directly redispatching generation or shedding load?</strong></p>
 </blockquote>
-<p>The control actions do <strong>not</strong> add transmission lines or reduce electricity demand. Instead, they change the busbar connections inside a substation so that power flows are redistributed through the existing network.</p>
+<p>DRL is evaluated as one method for selecting topology actions and is compared with Greedy action-by-action search. These actions do not add transmission lines; they only change existing busbar connections.</p>
+</section>
+<section id="how-a-busbar-switching-action-changes-power-flow" class="level3">
+<h3 class="anchored" data-anchor-id="how-a-busbar-switching-action-changes-power-flow">How a busbar-switching action changes power flow</h3>
+<p>The example below illustrates the physical meaning of one topology-control action. Before switching, all equipment is connected to Busbar 1 and Line C is overloaded. The action moves the terminals of Line A and Line B to Busbar 2 while leaving the generator, load, and Line C on Busbar 1. Splitting the original electrical node changes the available flow paths, so the power-flow solution and line-loading ratios are redistributed.</p>
+<div class="figure-panel">
+<p><img src="images/busbar_switching_powerflow.svg" class="img-fluid" style="width:100.0%" alt="Illustrative comparison of power flows before and after transferring Line A and Line B from Busbar 1 to Busbar 2 within a substation"></p>
+</div>
+<div class="mini-note">
+<p><strong>Illustrative example:</strong> the MW values in this diagram explain the switching mechanism and satisfy nodal power balance; they are not measurements from a reported Case14 test action. The action changes existing electrical connections and does not add a new transmission line.</p>
+</div>
+</section>
 </section>
 <section id="test-system" class="level2">
 <h2 class="anchored" data-anchor-id="test-system">Test system</h2>

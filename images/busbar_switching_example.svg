@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="900" viewBox="0 0 1800 900" role="img" aria-labelledby="title desc">
+  <title id="title">Busbar switching example from topology vector 1 1 1 to 2 1 1</title>
+  <desc id="desc">Before and after diagram of a substation. Line A is transferred from Busbar 1 to Busbar 2, while Line B and Load 1 remain connected to Busbar 1.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f6f8fc}.panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.title{font:700 31px Arial,sans-serif;fill:#172033}.head{font:700 27px Arial,sans-serif;fill:#172033}.label{font:600 21px Arial,sans-serif;fill:#27364f}.small{font:18px Arial,sans-serif;fill:#52627a}.vector{font:700 26px Consolas,monospace;fill:#0f4c81}.bus1{stroke:#2563eb;stroke-width:18;stroke-linecap:round}.bus2{stroke:#f97316;stroke-width:18;stroke-linecap:round}.wire{stroke:#334155;stroke-width:7;fill:none;stroke-linecap:round}.changed{stroke:#dc2626;stroke-width:8;fill:none;stroke-linecap:round}.device{fill:#fff;stroke:#334155;stroke-width:4}.sw{fill:#fff;stroke:#334155;stroke-width:4}.closed{fill:#16a34a;stroke:#fff;stroke-width:3}.open{stroke:#94a3b8;stroke-width:5}.arrow{stroke:#0f766e;stroke-width:7;fill:none;marker-end:url(#ah)}.box{fill:#ecfeff;stroke:#06b6d4;stroke-width:2}.changebox{fill:#fef2f2;stroke:#ef4444;stroke-width:2}.legend{fill:#fff7ed;stroke:#fb923c;stroke-width:2}
+    </style>
+    <marker id="ah" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#0f766e"/></marker>
+  </defs>
+  <rect class="bg" width="1800" height="900"/>
+  <text x="900" y="48" text-anchor="middle" class="title">Example action: transfer Line A from Busbar 1 to Busbar 2</text>
+
+  <rect x="55" y="82" width="720" height="675" rx="22" class="panel"/>
+  <rect x="1025" y="82" width="720" height="675" rx="22" class="panel"/>
+  <text x="415" y="128" text-anchor="middle" class="head">BEFORE — current topology</text>
+  <text x="1385" y="128" text-anchor="middle" class="head">AFTER — Action 7 applied</text>
+
+  <!-- Before busbars -->
+  <line x1="140" y1="270" x2="690" y2="270" class="bus1"/>
+  <line x1="140" y1="470" x2="690" y2="470" class="bus2"/>
+  <text x="140" y="235" class="label">Busbar 1</text><text x="140" y="435" class="label">Busbar 2</text>
+  <!-- Before devices -->
+  <path d="M240 270V565" class="wire"/><circle cx="240" cy="270" r="12" class="closed"/>
+  <rect x="190" y="565" width="100" height="56" rx="10" class="device"/><text x="240" y="601" text-anchor="middle" class="label">Line A</text>
+  <path d="M415 270V565" class="wire"/><circle cx="415" cy="270" r="12" class="closed"/>
+  <rect x="365" y="565" width="100" height="56" rx="10" class="device"/><text x="415" y="601" text-anchor="middle" class="label">Line B</text>
+  <path d="M590 270V565" class="wire"/><circle cx="590" cy="270" r="12" class="closed"/>
+  <path d="M560 565H620L590 620Z" class="device"/><text x="590" y="650" text-anchor="middle" class="label">Load 1</text>
+  <!-- open alternative Line A path -->
+  <path d="M295 470V505" class="open"/><line x1="282" y1="530" x2="308" y2="505" class="open"/>
+  <text x="335" y="500" class="small">alternative path open</text>
+  <rect x="185" y="680" width="460" height="52" rx="12" class="box"/>
+  <text x="415" y="714" text-anchor="middle" class="vector">Topology vector = [1, 1, 1]</text>
+
+  <!-- operation arrow -->
+  <path d="M805 350C875 285 925 285 995 350" class="arrow"/>
+  <text x="900" y="220" text-anchor="middle" class="head">Switching action</text>
+  <text x="900" y="260" text-anchor="middle" class="label">Line A: Busbar 1 → Busbar 2</text>
+  <text x="900" y="295" text-anchor="middle" class="small">Line B and Load 1: unchanged</text>
+  <rect x="808" y="405" width="184" height="105" rx="14" class="changebox"/>
+  <text x="900" y="440" text-anchor="middle" class="label">Only one entry</text>
+  <text x="900" y="471" text-anchor="middle" class="label">changes</text>
+  <text x="900" y="500" text-anchor="middle" class="vector">1 → 2</text>
+
+  <!-- After busbars -->
+  <line x1="1110" y1="270" x2="1660" y2="270" class="bus1"/>
+  <line x1="1110" y1="470" x2="1660" y2="470" class="bus2"/>
+  <text x="1110" y="235" class="label">Busbar 1</text><text x="1110" y="435" class="label">Busbar 2</text>
+  <!-- After devices -->
+  <path d="M1210 470V565" class="changed"/><circle cx="1210" cy="470" r="12" class="closed"/>
+  <rect x="1160" y="565" width="100" height="56" rx="10" class="device"/><text x="1210" y="601" text-anchor="middle" class="label">Line A</text>
+  <path d="M1385 270V565" class="wire"/><circle cx="1385" cy="270" r="12" class="closed"/>
+  <rect x="1335" y="565" width="100" height="56" rx="10" class="device"/><text x="1385" y="601" text-anchor="middle" class="label">Line B</text>
+  <path d="M1560 270V565" class="wire"/><circle cx="1560" cy="270" r="12" class="closed"/>
+  <path d="M1530 565H1590L1560 620Z" class="device"/><text x="1560" y="650" text-anchor="middle" class="label">Load 1</text>
+  <!-- open old Line A path -->
+  <path d="M1265 270V305" class="open"/><line x1="1252" y1="330" x2="1278" y2="305" class="open"/>
+  <text x="1305" y="330" class="small">old path open</text>
+  <rect x="1155" y="680" width="460" height="52" rx="12" class="box"/>
+  <text x="1385" y="714" text-anchor="middle" class="vector">Topology vector = [2, 1, 1]</text>
+
+  <!-- Footer -->
+  <rect x="180" y="795" width="1440" height="72" rx="16" class="legend"/>
+  <text x="900" y="825" text-anchor="middle" class="label">The action changes an existing connection; it does not add a new line or move electrical equipment.</text>
+  <text x="900" y="853" text-anchor="middle" class="small">After the topology change, Grid2Op recalculates the power flow and resulting line-loading ratios.</text>
+</svg>

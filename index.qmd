@@ -38,14 +38,45 @@ transmission-line overloads.
 ## Research question
 
 Power generation and load demand vary over time, which can create highly loaded operating
-conditions. The central question in this work is:
+conditions.
 
-> **Can a reinforcement-learning agent use topology reconfiguration to reduce line overloads
-> and prevent blackouts while remaining fast enough for online decision making?**
+### Conceptual correction: market redispatch is not topology control
 
-The control actions do **not** add transmission lines or reduce electricity demand.
-Instead, they change the busbar connections inside a substation so that power flows are
-redistributed through the existing network.
+An initial assumption was that PJM congestion management and substation topology control were
+the same process. **That assumption was incorrect.** PJM primarily uses security-constrained
+generation redispatch, which changes nodal power injections while normally retaining the network
+topology. In contrast, this study changes busbar connections while the agent does not directly
+control generation or demand. Both approaches redistribute line flows, but through different
+control variables. Machine learning and DRL are decision-making tools, not the research problem.
+
+The fundamental research question is therefore:
+
+> **To what extent can substation topology reconfiguration mitigate transmission-line
+> overloads and maintain secure operation under time-varying generation and demand, without
+> directly redispatching generation or shedding load?**
+
+DRL is evaluated as one method for selecting topology actions and is compared with Greedy
+action-by-action search. These actions do not add transmission lines; they only change existing
+busbar connections.
+
+### How a busbar-switching action changes power flow
+
+The example below illustrates the physical meaning of one topology-control action. Before
+switching, all equipment is connected to Busbar 1 and Line C is overloaded. The action
+moves the terminals of Line A and Line B to Busbar 2 while leaving the generator, load,
+and Line C on Busbar 1. Splitting the original electrical node changes the available flow
+paths, so the power-flow solution and line-loading ratios are redistributed.
+
+::: {.figure-panel}
+![](images/busbar_switching_powerflow.svg){fig-alt="Illustrative comparison of power flows before and after transferring Line A and Line B from Busbar 1 to Busbar 2 within a substation" width="100%"}
+:::
+
+<div class="mini-note">
+<strong>Illustrative example:</strong> the MW values in this diagram explain the switching
+mechanism and satisfy nodal power balance; they are not measurements from a reported
+Case14 test action. The action changes existing electrical connections and does not add
+a new transmission line.
+</div>
 
 ## Test system
 
