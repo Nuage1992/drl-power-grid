@@ -62,6 +62,35 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-diagram/mermaid-init.js"></script>
 <link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -107,9 +136,14 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#drl-topology-control-framework" id="toc-drl-topology-control-framework" class="nav-link" data-scroll-target="#drl-topology-control-framework">DRL topology-control framework</a></li>
   <li><a href="#action-space-design" id="toc-action-space-design" class="nav-link" data-scroll-target="#action-space-design">Action-space design</a></li>
   <li><a href="#methods-compared" id="toc-methods-compared" class="nav-link" data-scroll-target="#methods-compared">Methods compared</a></li>
+  <li><a href="#shared-reward-and-experimental-settings" id="toc-shared-reward-and-experimental-settings" class="nav-link" data-scroll-target="#shared-reward-and-experimental-settings">Shared reward and experimental settings</a></li>
+  <li><a href="#how-each-controller-makes-decisions" id="toc-how-each-controller-makes-decisions" class="nav-link" data-scroll-target="#how-each-controller-makes-decisions">How each controller makes decisions</a></li>
+  <li><a href="#why-did-the-methods-behave-differently" id="toc-why-did-the-methods-behave-differently" class="nav-link" data-scroll-target="#why-did-the-methods-behave-differently">Why did the methods behave differently?</a></li>
   <li><a href="#evaluation-metrics" id="toc-evaluation-metrics" class="nav-link" data-scroll-target="#evaluation-metrics">Evaluation metrics</a></li>
   <li><a href="#key-results" id="toc-key-results" class="nav-link" data-scroll-target="#key-results">Key results</a></li>
   <li><a href="#detailed-performance" id="toc-detailed-performance" class="nav-link" data-scroll-target="#detailed-performance">Detailed performance</a></li>
+  <li><a href="#mechanism-level-diagnostic-analysis" id="toc-mechanism-level-diagnostic-analysis" class="nav-link" data-scroll-target="#mechanism-level-diagnostic-analysis">Mechanism-level diagnostic analysis</a></li>
+  <li><a href="#interpretation-limits-and-next-validation-steps" id="toc-interpretation-limits-and-next-validation-steps" class="nav-link" data-scroll-target="#interpretation-limits-and-next-validation-steps">Interpretation limits and next validation steps</a></li>
   <li><a href="#main-findings" id="toc-main-findings" class="nav-link" data-scroll-target="#main-findings">Main findings</a></li>
   <li><a href="#research-message" id="toc-research-message" class="nav-link" data-scroll-target="#research-message">Research message</a></li>
   </ul>
@@ -258,7 +292,287 @@ Best DRL completion rate
 </div>
 </div>
 </div>
-<p>The 178 original actions change busbar connections within one substation. They are tested on 20 highly loaded states from the training data and ranked according to their ability to reduce line loading without producing an invalid power flow. The best 20 are retained, together with one Do-Nothing action.</p>
+<section id="where-the-178-candidate-actions-come-from" class="level3">
+<h3 class="anchored" data-anchor-id="where-the-178-candidate-actions-come-from">Where the 178 candidate actions come from</h3>
+<p>Grid2Op enumerates <strong>unitary topology actions</strong>: one candidate sets the busbar assignment of every controllable element at exactly one substation. It does not combine changes at multiple substations and it does not disconnect equipment. Busbar labels are electrically symmetric, so the first element is fixed to Busbar 1 to avoid counting the same partition twice. Every active busbar must also contain at least one transmission-line endpoint.</p>
+<p>For a substation with <span class="math inline">\(n_s\)</span> connected elements and <span class="math inline">\(m_s\)</span> line endpoints, the formula first counts all valid assignments, including the unchanged state in which every element remains on Busbar 1:</p>
+<p><span class="math display">\[
+C_s = 2^{n_s-1} - 2^{n_s-m_s} + 1.
+\]</span></p>
+<p>Grid2Op keeps these assignments as actions only when at least two valid choices exist. If <span class="math inline">\(C_s=1\)</span>, the only choice is the unchanged state, so Grid2Op returns zero actions:</p>
+<p><span class="math display">\[
+N_s=
+\begin{cases}
+C_s, &amp; C_s\geq2,\\
+0, &amp; C_s=1.
+\end{cases}
+\]</span></p>
+<p>S7 makes this distinction clear. It has two elements but only one line endpoint. A split would leave one busbar without a line connection, so the split is invalid. Its only valid assignment is the unchanged state: <span class="math inline">\(C_7=1\)</span>, but Grid2Op returns <span class="math inline">\(N_7=0\)</span> actions.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">Substation</th>
+<th style="text-align: right;">Elements (<span class="math inline">\(n_s\)</span>)</th>
+<th style="text-align: right;">Line endpoints (<span class="math inline">\(m_s\)</span>)</th>
+<th style="text-align: right;">Formula count (<span class="math inline">\(C_s\)</span>)</th>
+<th style="text-align: right;">Returned actions (<span class="math inline">\(N_s\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">S0</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">S1</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">29</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">S2</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">S3</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">31</td>
+<td style="text-align: right;">31</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">S4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">15</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">S5</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">57</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">S6</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><strong>S7</strong></td>
+<td style="text-align: right;"><strong>2</strong></td>
+<td style="text-align: right;"><strong>1</strong></td>
+<td style="text-align: right;"><strong>1</strong></td>
+<td style="text-align: right;"><strong>0</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">S8</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">15</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">S9</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">S10</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">S11</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">S12</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">7</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">S13</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><strong>Total</strong></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"><strong>179</strong></td>
+<td style="text-align: right;"><strong>178</strong></td>
+</tr>
+</tbody>
+</table>
+<p>In short, the formula counts 179 valid assignments, but S7 contributes only its unchanged state. Removing that non-action leaves 178 usable <strong>single-substation set-bus actions</strong>. This is not the number of all possible full-grid topologies.</p>
+</section>
+<section id="training-only-action-ranking" class="level3">
+<h3 class="anchored" data-anchor-id="training-only-action-ranking">Training-only action ranking</h3>
+<p>Candidate selection used only the training chronics. The procedure scanned 1,392 training steps and retained 20 stress states satisfying (<span class="math inline">\(\max(\rho) \geq 0.90\)</span>). At each stress state, the three most heavily loaded lines were identified, and candidate actions associated with their endpoint substations were evaluated. This relevance filter resulted in 108 unique candidates being simulated from the original set of 178.</p>
+<p>Each relevant candidate was assessed with a one-step Grid2Op simulation. Grid risk was measured as</p>
+<p><span class="math display">\[
+J = \max_i(\rho_i) + 5\sum_i\max(\rho_i-1,0)^2,
+\]</span></p>
+<p>and the non-negative gain of an action was</p>
+<p><span class="math display">\[
+\Delta J = \max(J_{\mathrm{before}}-J_{\mathrm{after}},0).
+\]</span></p>
+<p>Actions were ranked first by the fraction of stress states in which they reduced (<span class="math inline">\(J\)</span>), then by mean one-step gain and evaluation count. The highest-ranked 20 topology actions were fixed before agent training. A separate global Do-Nothing action, A0, produced the final 21-action benchmark. Validation and test chronics were not used in this selection.</p>
+</section>
+<section id="the-fixed-21-action-catalogue" class="level3">
+<h3 class="anchored" data-anchor-id="the-fixed-21-action-catalogue">The fixed 21-action catalogue</h3>
+<div class="figure-panel">
+<p><img src="images/case14_action_catalogue.png" class="img-fluid" style="width:100.0%" alt="Heatmap of the 20 selected Case14 topology actions showing busbar assignments and their training-only ranking scores"></p>
+</div>
+<p>In panel <strong>a</strong>, blue cells assign a device to Busbar 1, orange cells assign it to Busbar 2, and grey cells indicate a substation unaffected by that action. A line label such as <code>L9@S12</code> denotes the endpoint of Line 9 located at Substation 12. In panel <strong>b</strong>, the lower horizontal axis reports the percentage of the 20 training stress states improved by each action; the upper axis and black diamonds report the mean one-step score reduction.</p>
+<p>The table below lists the Busbar 2 members for each action. All other devices at the same substation are explicitly assigned to Busbar 1.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Action</th>
+<th style="text-align: right;">Substation</th>
+<th>Devices assigned to Busbar 2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">A0</td>
+<td style="text-align: right;">—</td>
+<td>Do-Nothing; no topology change</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A1</td>
+<td style="text-align: right;">S4</td>
+<td>L17, L1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A2</td>
+<td style="text-align: right;">S12</td>
+<td>L9</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A3</td>
+<td style="text-align: right;">S5</td>
+<td>Gen2, Gen3, L7, L9</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A4</td>
+<td style="text-align: right;">S1</td>
+<td>L2, L4</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A5</td>
+<td style="text-align: right;">S1</td>
+<td>L2, L4, L0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A6</td>
+<td style="text-align: right;">S5</td>
+<td>Gen3, L7, L9, L17</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A7</td>
+<td style="text-align: right;">S4</td>
+<td>L17, L6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A8</td>
+<td style="text-align: right;">S4</td>
+<td>L1, L4</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A9</td>
+<td style="text-align: right;">S1</td>
+<td>Gen0, L4, L0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A10</td>
+<td style="text-align: right;">S1</td>
+<td>Gen0, L3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A11</td>
+<td style="text-align: right;">S1</td>
+<td>Gen0, L2, L4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A12</td>
+<td style="text-align: right;">S1</td>
+<td>L3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A13</td>
+<td style="text-align: right;">S5</td>
+<td>Gen2, Gen3, L7, L8, L17</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A14</td>
+<td style="text-align: right;">S5</td>
+<td>Gen3, L7, L17</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A15</td>
+<td style="text-align: right;">S4</td>
+<td>L17, L4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A16</td>
+<td style="text-align: right;">S4</td>
+<td>L17, L1, L6</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A17</td>
+<td style="text-align: right;">S12</td>
+<td>Empty; restore all S12 devices to Busbar 1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A18</td>
+<td style="text-align: right;">S5</td>
+<td>Empty; restore all S5 devices to Busbar 1</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">A19</td>
+<td style="text-align: right;">S4</td>
+<td>Empty; restore all S4 devices to Busbar 1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">A20</td>
+<td style="text-align: right;">S1</td>
+<td>Empty; restore all S1 devices to Busbar 1</td>
+</tr>
+</tbody>
+</table>
+<p>These are set-point actions rather than toggle commands. Repeating an action after its target topology is already active produces another nonzero action request but no new physical switch.</p>
+</section>
 </section>
 <section id="methods-compared" class="level2">
 <h2 class="anchored" data-anchor-id="methods-compared">Methods compared</h2>
@@ -288,6 +602,636 @@ Best DRL completion rate
 <strong>Do-Nothing</strong><span>No-control baseline</span>
 </div>
 </div>
+</section>
+<section id="shared-reward-and-experimental-settings" class="level2">
+<h2 class="anchored" data-anchor-id="shared-reward-and-experimental-settings">Shared reward and experimental settings</h2>
+<p>All learning-based controllers receive the same reward after each grid action. The reward is defined in this project rather than supplied by Grid2Op:</p>
+<p><span class="math display">\[
+\begin{aligned}
+r_t ={}&amp; 1
+-5\sum_i[\max(\rho_i-0.9,0)]^2
+-20\sum_i[\max(\rho_i-1,0)]^2 \\
+&amp;-0.05I_{\mathrm{switch}}
+-0.5I_{\mathrm{invalid}}
+-100I_{\mathrm{blackout}}.
+\end{aligned}
+\]</span></p>
+<p>Here, <span class="math inline">\(\rho_i\)</span> is the loading ratio of line <span class="math inline">\(i\)</span>. The first term rewards each surviving five-minute step. Loading above 90% receives a warning penalty, loading above 100% receives an additional penalty, and actual switching, invalid actions, and blackout are penalized separately.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 40%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Reward parameter</th>
+<th style="text-align: right;">Value</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Survival reward</td>
+<td style="text-align: right;">1.0</td>
+<td>Reward one safe five-minute step</td>
+</tr>
+<tr class="even">
+<td>Warning threshold</td>
+<td style="text-align: right;">0.90</td>
+<td>Start discouraging operation near the thermal limit</td>
+</tr>
+<tr class="odd">
+<td>Warning weight</td>
+<td style="text-align: right;">5.0</td>
+<td>Control the penalty for <span class="math inline">\(\rho&gt;0.9\)</span></td>
+</tr>
+<tr class="even">
+<td>Overload weight</td>
+<td style="text-align: right;">20.0</td>
+<td>Add a stronger penalty for <span class="math inline">\(\rho&gt;1\)</span></td>
+</tr>
+<tr class="odd">
+<td>Switching weight</td>
+<td style="text-align: right;">0.05</td>
+<td>Discourage unnecessary physical switching</td>
+</tr>
+<tr class="even">
+<td>Invalid-action penalty</td>
+<td style="text-align: right;">0.5</td>
+<td>Penalize illegal or ambiguous commands</td>
+</tr>
+<tr class="odd">
+<td>Blackout penalty</td>
+<td style="text-align: right;">100</td>
+<td>Strongly penalize terminal grid failure</td>
+</tr>
+</tbody>
+</table>
+<p>These weights were selected heuristically to express the priority <code>blackout prevention &gt; overload mitigation &gt; fewer switching operations</code>. They are not physical constants or proven optimal values. A reward-sensitivity study is therefore needed before making a general claim about the best weighting.</p>
+<p>The common experiment uses 500,000 training steps, a maximum episode length of 2,016 steps, a thermal-limit scale of 1.05, and a fixed 21-action catalogue. The chronics are split into 70% training, 15% validation, and 15% test sets using split seed 2026. Training seed 0 is used for the reported preliminary models. The best checkpoint is selected on ten validation episodes every 50,000 training steps.</p>
+</section>
+<section id="how-each-controller-makes-decisions" class="level2">
+<h2 class="anchored" data-anchor-id="how-each-controller-makes-decisions">How each controller makes decisions</h2>
+<section id="do-nothing" class="level3">
+<h3 class="anchored" data-anchor-id="do-nothing">Do-Nothing</h3>
+<p>Do-Nothing always selects A0:</p>
+<p><span class="math display">\[a_t=A0.\]</span></p>
+<p>It has no network, training objective, or learning hyperparameters. Its reported reward is still calculated with the common environment reward. It measures how often the grid can complete seven days without active topology control.</p>
+</section>
+<section id="greedy" class="level3">
+<h3 class="anchored" data-anchor-id="greedy">Greedy</h3>
+<p>Greedy is a model-based, one-step controller rather than a DRL method. If the current maximum loading is no greater than 0.90, it selects A0. Otherwise, it uses Grid2Op to simulate each of the 21 actions one step ahead and minimizes</p>
+<p><span class="math display">\[
+J(s_t,a)=\max_i\rho_{i,t+1}
++5\sum_i[\max(\rho_{i,t+1}-1,0)]^2
++0.01I(a\ne A0).
+\]</span></p>
+<p>An illegal or immediately terminal simulation receives an additional cost of 1,000. The Greedy score <span class="math inline">\(J\)</span> is used only to select an action; the resulting episode is evaluated with the same environment reward as every other controller.</p>
+<section id="greedy-decision-score-versus-common-reward" class="level4">
+<h4 class="anchored" data-anchor-id="greedy-decision-score-versus-common-reward">Greedy decision score versus common reward</h4>
+<p>The two quantities have different roles. At each five-minute step, Greedy simulates the candidate actions, calculates <span class="math inline">\(J(s_t,a)\)</span> for each simulation, and executes the action with the lowest score:</p>
+<p><span class="math display">\[
+a_t=\arg\min_a J(s_t,a).
+\]</span></p>
+<p>The common reward does <strong>not</strong> participate in this choice. It is calculated only after the selected action has been executed in the environment. The step rewards are then summed to report the final episode reward and to compare Greedy with the other methods. Greedy does not use these rewards to update a model.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    A[Current grid state] --&gt; B[Simulate the 21 actions]
+    B --&gt; C[Calculate internal score J]
+    C --&gt; D[Execute the action with minimum J]
+    D --&gt; E[Calculate the common reward]
+    E --&gt; F[Accumulate the reported episode reward]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 23%">
+<col style="width: 38%">
+<col style="width: 38%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Quantity</th>
+<th style="text-align: center;">Determines the Greedy action?</th>
+<th style="text-align: center;">Used in the reported episode reward?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Internal score <span class="math inline">\(J\)</span></td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">No</td>
+</tr>
+<tr class="even">
+<td>Common environment reward <span class="math inline">\(r_t\)</span></td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+</tbody>
+</table>
+<p>This distinction also separates Greedy from the DRL agents. Greedy directly minimizes a one-step power-flow score, whereas DQN, PPO, and A2C use the common reward during training to learn a policy that seeks higher discounted return.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 40%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Greedy parameter</th>
+<th style="text-align: right;">Value</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Activation threshold</td>
+<td style="text-align: right;">0.90</td>
+<td>Avoid simulations while the grid is safely loaded</td>
+</tr>
+<tr class="even">
+<td>Look-ahead horizon</td>
+<td style="text-align: right;">1 step</td>
+<td>Predict the next five-minute state</td>
+</tr>
+<tr class="odd">
+<td>Candidate actions</td>
+<td style="text-align: right;">21</td>
+<td>Test the shared action catalogue</td>
+</tr>
+<tr class="even">
+<td>Overload weight</td>
+<td style="text-align: right;">5.0</td>
+<td>Prefer actions that reduce overload</td>
+</tr>
+<tr class="odd">
+<td>Nonzero-action cost</td>
+<td style="text-align: right;">0.01</td>
+<td>Prefer A0 when two actions have similar effects</td>
+</tr>
+<tr class="even">
+<td>Illegal/terminal cost</td>
+<td style="text-align: right;">1,000</td>
+<td>Reject unsafe simulated actions</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="dqn-family" class="level3">
+<h3 class="anchored" data-anchor-id="dqn-family">DQN family</h3>
+<p>DQN learns the expected discounted return of each state-action pair:</p>
+<p><span class="math display">\[Q(s_t,a_t)=\mathbb{E}\left[\sum_{k=0}^{\infty}\gamma^k r_{t+k}\right].\]</span></p>
+<p>At evaluation, the network outputs 21 Q-values and selects the largest.</p>
+<section id="online-and-target-networks" class="level4">
+<h4 class="anchored" data-anchor-id="online-and-target-networks">Online and Target networks</h4>
+<p>Every DQN variant in this study contains two Q-networks. They are not two separate agents. They are two copies of the same network architecture with different roles:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Network</th>
+<th>Main role</th>
+<th>How it changes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Online network</strong></td>
+<td>Select actions and learn <span class="math inline">\(Q_{\mathrm{online}}(s,a)\)</span></td>
+<td>Updated by gradient descent during training</td>
+</tr>
+<tr class="even">
+<td><strong>Target network</strong></td>
+<td>Provide a stable value for the learning target</td>
+<td>Held fixed, then replaced by the Online weights every 2,000 steps</td>
+</tr>
+</tbody>
+</table>
+<p>The Online network changes frequently. If it were also used as a continuously changing target, learning could become unstable. The delayed Target network makes the target value more stable. During evaluation, only the Online network is needed to select an action:</p>
+<p><span class="math display">\[
+a_t=\arg\max_a Q_{\mathrm{online}}(s_t,a).
+\]</span></p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    S[Current state] --&gt; O[Online network]
+    O --&gt; A[Select one of 21 actions]
+    O --&gt; L[Huber-loss update]
+    T[Target network] --&gt; L
+    O -. copy weights every 2,000 steps .-&gt; T
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>Standard DQN uses the target</p>
+<p><span class="math display">\[
+y_t=r_t+\gamma(1-d_t)\max_{a'}Q_{\mathrm{target}}(s_{t+1},a'),
+\]</span></p>
+<p>and minimizes the Huber loss between <span class="math inline">\(Q_{\mathrm{online}}(s_t,a_t)\)</span> and <span class="math inline">\(y_t\)</span>.</p>
+<p>Double DQN lets the online network select the next action and the target network evaluate it:</p>
+<p><span class="math display">\[
+a^*=\arg\max_{a'}Q_{\mathrm{online}}(s_{t+1},a'),\qquad
+y_t=r_t+\gamma(1-d_t)Q_{\mathrm{target}}(s_{t+1},a^*).
+\]</span></p>
+<p>Dueling DQN changes the output architecture to</p>
+<p><span class="math display">\[
+Q(s,a)=V(s)+A(s,a)-\frac{1}{21}\sum_{a'}A(s,a'),
+\]</span></p>
+<p>where <span class="math inline">\(V(s)\)</span> measures the value of the grid state and <span class="math inline">\(A(s,a)\)</span> measures the relative advantage of each action. Dueling Double DQN combines this architecture with the Double DQN target.</p>
+<p>All four DQN variants use both networks. Standard DQN and Dueling DQN use the Target network to find the largest next-state Q-value. Double DQN and Dueling Double DQN use the Online network to select the next action and the Target network to evaluate that action. In the Dueling variants, both networks use the same value–advantage architecture. PPO and A2C do not use this Online–Target Q-network pair; they instead use Actor and Critic networks.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 40%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>DQN-family parameter</th>
+<th style="text-align: right;">Value</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hidden layers</td>
+<td style="text-align: right;">[128, 128], ReLU</td>
+<td>Map the observation to 21 action values</td>
+</tr>
+<tr class="even">
+<td>Learning rate</td>
+<td style="text-align: right;">0.0001</td>
+<td>Set the Adam optimizer update size</td>
+</tr>
+<tr class="odd">
+<td>Discount factor <span class="math inline">\(\gamma\)</span></td>
+<td style="text-align: right;">0.99</td>
+<td>Control the importance of future rewards</td>
+</tr>
+<tr class="even">
+<td>Replay-buffer size</td>
+<td style="text-align: right;">100,000</td>
+<td>Store past transitions for reuse</td>
+</tr>
+<tr class="odd">
+<td>Batch size</td>
+<td style="text-align: right;">128</td>
+<td>Number of replay samples per update</td>
+</tr>
+<tr class="even">
+<td>Learning starts</td>
+<td style="text-align: right;">5,000 steps</td>
+<td>Fill the replay buffer before learning</td>
+</tr>
+<tr class="odd">
+<td>Training frequency</td>
+<td style="text-align: right;">Every 4 steps</td>
+<td>Control network-update frequency</td>
+</tr>
+<tr class="even">
+<td>Target update interval</td>
+<td style="text-align: right;">2,000 steps</td>
+<td>Copy online weights to the target network</td>
+</tr>
+<tr class="odd">
+<td>Gradient limit</td>
+<td style="text-align: right;">10.0</td>
+<td>Reduce unstable gradient updates</td>
+</tr>
+<tr class="even">
+<td>Exploration <span class="math inline">\(\epsilon\)</span></td>
+<td style="text-align: right;">1.0 to 0.05</td>
+<td>Move from random exploration to learned actions</td>
+</tr>
+<tr class="odd">
+<td>Exploration decay</td>
+<td style="text-align: right;">100,000 steps</td>
+<td>Set how quickly <span class="math inline">\(\epsilon\)</span> decreases</td>
+</tr>
+<tr class="even">
+<td>Loss</td>
+<td style="text-align: right;">Huber loss</td>
+<td>Reduce sensitivity to very large temporal-difference errors</td>
+</tr>
+</tbody>
+</table>
+<p>The four variants use the same settings. They differ only in the Double and Dueling switches:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Method</th>
+<th style="text-align: center;">Double target</th>
+<th style="text-align: center;">Dueling architecture</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DQN</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">No</td>
+</tr>
+<tr class="even">
+<td>Double DQN</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">No</td>
+</tr>
+<tr class="odd">
+<td>Dueling DQN</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr class="even">
+<td>Dueling Double DQN</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="ppo" class="level3">
+<h3 class="anchored" data-anchor-id="ppo">PPO</h3>
+<p>PPO is an on-policy actor–critic method. The actor outputs a probability for each of the 21 actions, while the critic estimates <span class="math inline">\(V(s)\)</span>. Generalized advantage estimation uses <span class="math inline">\(\gamma=0.99\)</span> and <span class="math inline">\(\lambda=0.95\)</span>. PPO limits each policy update with</p>
+<p><span class="math display">\[
+L_{\mathrm{clip}}=
+\mathbb{E}\left[
+\min\left(r_t(\theta)\hat A_t,
+\operatorname{clip}(r_t(\theta),0.8,1.2)\hat A_t\right)
+\right],
+\]</span></p>
+<p>where <span class="math inline">\(r_t(\theta)\)</span> is the new-to-old action-probability ratio. Its optimization combines the clipped policy objective, a value loss, and an entropy bonus.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 40%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>PPO parameter</th>
+<th style="text-align: right;">Value</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hidden layers</td>
+<td style="text-align: right;">[128, 128]</td>
+<td>Build the actor and critic networks</td>
+</tr>
+<tr class="even">
+<td>Learning rate</td>
+<td style="text-align: right;">0.0003</td>
+<td>Set the Adam update size</td>
+</tr>
+<tr class="odd">
+<td>Discount factor <span class="math inline">\(\gamma\)</span></td>
+<td style="text-align: right;">0.99</td>
+<td>Weight future rewards</td>
+</tr>
+<tr class="even">
+<td>GAE <span class="math inline">\(\lambda\)</span></td>
+<td style="text-align: right;">0.95</td>
+<td>Balance bias and variance in advantage estimates</td>
+</tr>
+<tr class="odd">
+<td>Rollout length</td>
+<td style="text-align: right;">1,024 steps</td>
+<td>Collect on-policy data before updating</td>
+</tr>
+<tr class="even">
+<td>Batch size</td>
+<td style="text-align: right;">128</td>
+<td>Split each rollout into mini-batches</td>
+</tr>
+<tr class="odd">
+<td>Epochs per rollout</td>
+<td style="text-align: right;">10</td>
+<td>Reuse each rollout for ten optimization passes</td>
+</tr>
+<tr class="even">
+<td>Clip range</td>
+<td style="text-align: right;">0.20</td>
+<td>Limit large policy changes</td>
+</tr>
+<tr class="odd">
+<td>Entropy coefficient</td>
+<td style="text-align: right;">0.01</td>
+<td>Encourage action exploration</td>
+</tr>
+<tr class="even">
+<td>Value-loss coefficient</td>
+<td style="text-align: right;">0.5</td>
+<td>Weight critic learning</td>
+</tr>
+<tr class="odd">
+<td>Gradient limit</td>
+<td style="text-align: right;">0.5</td>
+<td>Stabilize optimization</td>
+</tr>
+<tr class="even">
+<td>Advantage normalization</td>
+<td style="text-align: right;">Enabled</td>
+<td>Standardize advantages before updating</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="a2c" class="level3">
+<h3 class="anchored" data-anchor-id="a2c">A2C</h3>
+<p>A2C is also an actor–critic method, but it has no PPO clipping and updates after much shorter rollouts. Its objective can be summarized as</p>
+<p><span class="math display">\[
+L_{\mathrm{A2C}}=
+-\mathbb{E}[\log\pi(a_t|s_t)\hat A_t]
++0.5L_{\mathrm{value}}-0.01H(\pi).
+\]</span></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 40%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>A2C parameter</th>
+<th style="text-align: right;">Value</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hidden layers</td>
+<td style="text-align: right;">[128, 128]</td>
+<td>Build the actor and critic networks</td>
+</tr>
+<tr class="even">
+<td>Learning rate</td>
+<td style="text-align: right;">0.0007</td>
+<td>Set the RMSprop update size</td>
+</tr>
+<tr class="odd">
+<td>Discount factor <span class="math inline">\(\gamma\)</span></td>
+<td style="text-align: right;">0.99</td>
+<td>Weight future rewards</td>
+</tr>
+<tr class="even">
+<td>GAE <span class="math inline">\(\lambda\)</span></td>
+<td style="text-align: right;">0.95</td>
+<td>Control advantage-estimation bias and variance</td>
+</tr>
+<tr class="odd">
+<td>Rollout length</td>
+<td style="text-align: right;">20 steps</td>
+<td>Update frequently using short trajectories</td>
+</tr>
+<tr class="even">
+<td>Entropy coefficient</td>
+<td style="text-align: right;">0.01</td>
+<td>Encourage exploration</td>
+</tr>
+<tr class="odd">
+<td>Value-loss coefficient</td>
+<td style="text-align: right;">0.5</td>
+<td>Weight critic learning</td>
+</tr>
+<tr class="even">
+<td>Gradient limit</td>
+<td style="text-align: right;">0.5</td>
+<td>Stabilize optimization</td>
+</tr>
+<tr class="odd">
+<td>RMSprop epsilon</td>
+<td style="text-align: right;"><span class="math inline">\(10^{-5}\)</span></td>
+<td>Improve numerical stability</td>
+</tr>
+<tr class="even">
+<td>Advantage normalization</td>
+<td style="text-align: right;">Disabled</td>
+<td>Use the Stable-Baselines3 A2C default</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="why-did-the-methods-behave-differently" class="level2">
+<h2 class="anchored" data-anchor-id="why-did-the-methods-behave-differently">Why did the methods behave differently?</h2>
+<section id="what-the-results-directly-show" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-results-directly-show">What the results directly show</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>What happened in the current test</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Greedy</strong></td>
+<td>Completed all 20 scenarios, but needed the most computation time</td>
+</tr>
+<tr class="even">
+<td><strong>Dueling DQN</strong></td>
+<td>Achieved the best completion rate among the learned controllers</td>
+</tr>
+<tr class="odd">
+<td><strong>A2C</strong></td>
+<td>Made no real topology changes and produced the same result as Do-Nothing</td>
+</tr>
+<tr class="even">
+<td><strong>Double DQN variants</strong></td>
+<td>Requested many nonzero actions, but few requests changed the physical topology</td>
+</tr>
+</tbody>
+</table>
+<p>These are measured results. The explanations below are possible reasons, not proven facts.</p>
+</section>
+<section id="possible-reasons-in-simple-terms" class="level3">
+<h3 class="anchored" data-anchor-id="possible-reasons-in-simple-terms">Possible reasons in simple terms</h3>
+<p><strong>Why was Greedy safe but slow?</strong><br>
+When the grid became stressed, Greedy used the simulator to try the 21 candidate actions before choosing one. This made its decisions reliable, but each decision required many extra power-flow calculations.</p>
+<p><strong>Why might Dueling DQN work well?</strong><br>
+Dueling DQN learns two questions separately: <em>Is the current grid state safe or dangerous?</em> and <em>Which action is better in this state?</em> Most time steps were already safe, so this separation may have helped the network learn when an action was truly needed.</p>
+<p><strong>Why did A2C behave like Do-Nothing?</strong><br>
+Most time steps gave a positive survival reward without any switching. A2C may therefore have learned that A0 was usually the safest choice. Its short 20-step updates may also have made rare dangerous events harder to learn from.</p>
+<p><strong>Why were many Double DQN requests ineffective?</strong><br>
+The actions are set-point commands. If an action requests a topology that is already active, the request is nonzero but no switch occurs. The DRL input contains line status and power-flow measurements, but not the complete Busbar 1/2 assignment (<code>topo_vect</code>). The agent may therefore repeat an action because it cannot directly see that the requested topology is already active.</p>
+<p><strong>Why is Greedy less affected by missing <code>topo_vect</code>?</strong><br>
+Greedy obtains the full Grid2Op state and simulates each action before execution. It can observe the predicted result even when the smaller DRL input does not describe every busbar assignment explicitly.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Measured result versus possible explanation">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Measured result versus possible explanation
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The benchmark tells us <strong>which method performed better</strong>. It does not yet prove <strong>why</strong>. For example, Dueling DQN’s design is a reasonable explanation for its result, but the current single-seed experiment cannot prove that the Dueling architecture caused the improvement.</p>
+</div>
+</div>
+</section>
+<section id="how-to-check-these-explanations" class="level3">
+<h3 class="anchored" data-anchor-id="how-to-check-these-explanations">How to check these explanations</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Question</th>
+<th>Simple follow-up test</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Is Dueling DQN consistently better?</td>
+<td>Train each method with at least three seeds</td>
+</tr>
+<tr class="even">
+<td>Does missing topology information cause repeated requests?</td>
+<td>Add <code>topo_vect</code> and train again</td>
+</tr>
+<tr class="odd">
+<td>Is an algorithm stuck on one action?</td>
+<td>Count how often it selects A0–A20</td>
+</tr>
+<tr class="even">
+<td>Does a switch actually improve the grid?</td>
+<td>Compare maximum <span class="math inline">\(\rho\)</span> before and after each switch</td>
+</tr>
+<tr class="odd">
+<td>Can repeated commands be reduced?</td>
+<td>Mask an already-active action or add a small request penalty</td>
+</tr>
+</tbody>
+</table>
+<p>Until these tests are completed, the performance differences are confirmed, but their causes should be presented as possible explanations.</p>
+</section>
 </section>
 <section id="evaluation-metrics" class="level2">
 <h2 class="anchored" data-anchor-id="evaluation-metrics">Evaluation metrics</h2>
@@ -497,6 +1441,149 @@ Sub-millisecond online action selection.
 </tbody>
 </table>
 </section>
+<section id="mechanism-level-diagnostic-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="mechanism-level-diagnostic-analysis">Mechanism-level diagnostic analysis</h2>
+<p>The aggregate benchmark identifies the strongest methods but does not explain why an episode succeeds or fails. A second evaluation therefore recorded one diagnostic row at every five-minute step for five representative controllers: Do-Nothing, Greedy, DQN, Dueling DQN, and PPO. The log contains the selected action, affected substation, maximum line-loading ratio, overloaded-line IDs, actual topology changes, line disconnections, illegal-action flags, terminal exceptions, and inference time.</p>
+<section id="what-the-20-test-scenarios-represent" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-20-test-scenarios-represent">What the 20 test scenarios represent</h3>
+<p>Each test scenario is a pre-existing Grid2Op chronic directory containing one seven-day sequence of generation and load values. For example, <code>0851</code> identifies the folder <code>chronics/0851</code>; it is a dataset identifier, not a random seed or difficulty score. The 20 fixed held-out scenarios used here were</p>
+<pre class="text"><code>0009, 0033, 0153, 0207, 0275, 0301, 0315, 0411, 0443, 0513,
+0561, 0573, 0685, 0715, 0818, 0851, 0881, 0900, 0903, 0998.</code></pre>
+<p>The underlying generation and load trajectories are read from the stored CSV files; they are not regenerated during evaluation. All methods start from the same scenario and use the same exogenous time series, enabling paired scenario-level comparison.</p>
+</section>
+<section id="scenario-outcomes-action-efficiency-and-terminal-failures" class="level3">
+<h3 class="anchored" data-anchor-id="scenario-outcomes-action-efficiency-and-terminal-failures">Scenario outcomes, action efficiency, and terminal failures</h3>
+<div class="figure-panel">
+<p><img src="images/case14_diagnostic_summary.png" class="img-fluid" style="width:100.0%" alt="Scenario-level completion matrix, nonzero action requests versus actual switching, and terminal failure categories for five Case14 controllers"></p>
+</div>
+<p>Panel <strong>a</strong> shows which controllers completed each seven-day chronic. Greedy rescued all six Do-Nothing failures. Dueling DQN rescued five without creating a new failure, whereas DQN rescued five baseline failures but failed in Scenario 0033, which Do-Nothing completed. PPO rescued two baseline failures.</p>
+<p>Panel <strong>b</strong> distinguishes an <strong>action request</strong> from an <strong>actual switching step</strong>. At each five-minute step, the controller selects exactly one of A0–A20. Selecting A1–A20 counts as one nonzero request. It counts as an actual switching step only if the network topology or line status physically changes after execution. One requested action may set several devices within one substation, but the controller cannot request two sequential actions within the same five-minute step.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 26%">
+<col style="width: 26%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th style="text-align: right;">Nonzero requests per episode</th>
+<th style="text-align: right;">Actual switching steps per episode</th>
+<th style="text-align: right;">Request-to-switch effectiveness</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Greedy</td>
+<td style="text-align: right;">13.15</td>
+<td style="text-align: right;">13.15</td>
+<td style="text-align: right;">100.000%</td>
+</tr>
+<tr class="even">
+<td>Dueling DQN</td>
+<td style="text-align: right;">1959.40</td>
+<td style="text-align: right;">15.55</td>
+<td style="text-align: right;">0.794%</td>
+</tr>
+<tr class="odd">
+<td>DQN</td>
+<td style="text-align: right;">1960.10</td>
+<td style="text-align: right;">8.60</td>
+<td style="text-align: right;">0.439%</td>
+</tr>
+<tr class="even">
+<td>PPO</td>
+<td style="text-align: right;">1767.75</td>
+<td style="text-align: right;">30.00</td>
+<td style="text-align: right;">1.697%</td>
+</tr>
+<tr class="odd">
+<td>Do-Nothing</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">Not applicable</td>
+</tr>
+</tbody>
+</table>
+<p>Request-to-switch effectiveness is defined as</p>
+<p><span class="math display">\[
+\eta_{\mathrm{action}} =
+\frac{N_{\mathrm{actual\ switching\ steps}}}
+{N_{\mathrm{nonzero\ requests}}}\times100\%.
+\]</span></p>
+<p>The low DRL values do not mean that multiple actions were executed every five minutes. Instead, the learned policies repeatedly selected set-point actions whose target topology was already active. The present reward penalizes actual switching, but it does not directly penalize a repeated nonzero request that leaves the topology unchanged. Greedy avoids this pattern because it selects A0 under low stress and requests a nonzero action only when its one-step search selects a physical topology change.</p>
+<p>Panel <strong>c</strong> reports the terminal exceptions. Most blackout episodes ended with AC power-flow non-convergence. This exception describes how Grid2Op stopped, not necessarily the complete initiating mechanism; the preceding overload, disconnection, and action sequence must also be examined.</p>
+</section>
+<section id="representative-overload-trajectories" class="level3">
+<h3 class="anchored" data-anchor-id="representative-overload-trajectories">Representative overload trajectories</h3>
+<div class="figure-panel">
+<p><img src="images/case14_representative_trajectories.png" class="img-fluid" style="width:100.0%" alt="Maximum line-loading trajectories for Scenarios 0275, 0033, and 0851 with topology-switch and blackout markers"></p>
+</div>
+<p>Each curve reports the maximum line-loading ratio observed before the next action,</p>
+<p><span class="math display">\[
+\rho_{\max,t}=\max_i(\rho_{i,t}).
+\]</span></p>
+<p>The red dashed line marks the overload threshold ( <span class="math inline">\(\rho=1\)</span>), circles mark actual topology switches, and an <code>X</code> marks blackout termination. Scenario 0275 illustrates a baseline failure rescued by both DQN variants. Scenario 0033 isolates a DQN-specific failure. Scenario 0851 is the hardest example in this subset: only Greedy completed all 2,016 steps.</p>
+</section>
+<section id="dqn-failure-sequence-in-scenario-0033" class="level3">
+<h3 class="anchored" data-anchor-id="dqn-failure-sequence-in-scenario-0033">DQN failure sequence in Scenario 0033</h3>
+<p>The DQN failure classification was taken from the Grid2Op step log rather than inferred from the completion curve alone.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 36%">
+<col style="width: 36%">
+<col style="width: 27%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">Step</th>
+<th style="text-align: right;">Selected action</th>
+<th>Logged event</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1669</td>
+<td style="text-align: right;">A17</td>
+<td>Line 9 was slightly overloaded; the grid continued operating.</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1670</td>
+<td style="text-align: right;">A9</td>
+<td>Lines 9 and 13 changed to disconnected status; maximum loading rose from approximately 1.00 to 1.86.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">1671</td>
+<td style="text-align: right;">A2</td>
+<td>Grid2Op rejected the request as illegal because it affected the status of more than one line (<code>[9, 13]</code>); the episode did not yet terminate.</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1672</td>
+<td style="text-align: right;">A2</td>
+<td>The illegal-action warning recurred and the AC power flow failed to converge after ten Newton–Raphson iterations.</td>
+</tr>
+</tbody>
+</table>
+<p>Across the complete 20-scenario diagnostic run, DQN produced two illegal-action flags, both in Scenario 0033. Do-Nothing, Greedy, Dueling DQN, and PPO produced none. An illegal request is normally ignored by Grid2Op and therefore should not be interpreted as proof that the request alone caused the blackout. A more bounded interpretation is that the grid had already entered a severely stressed post-disconnection state, and the repeated illegal request failed to provide a feasible recovery action before power-flow non-convergence.</p>
+</section>
+<section id="overload-is-not-identical-to-blackout" class="level3">
+<h3 class="anchored" data-anchor-id="overload-is-not-identical-to-blackout">Overload is not identical to blackout</h3>
+<p>A line is overloaded when ( <span class="math inline">\(\rho &gt; 0.90\)</span>), but this does not necessarily terminate the episode. Grid2Op tracks consecutive overload duration for each line and may disconnect a line after the allowed duration, or immediately under sufficiently severe overload. The remaining network is then solved again. The episode ends only if the resulting grid can no longer be operated, for example because of cascading disconnections, islanding, or power-flow non-convergence. This is why Greedy can show a small nonzero overload-step ratio while still achieving zero blackouts in the current 20 scenarios.</p>
+</section>
+</section>
+<section id="interpretation-limits-and-next-validation-steps" class="level2">
+<h2 class="anchored" data-anchor-id="interpretation-limits-and-next-validation-steps">Interpretation limits and next validation steps</h2>
+<p>The mechanism logs deepen the seed-0 comparison, but they do not yet establish that a particular neural architecture intrinsically causes the observed ranking. The current evidence is limited to one training seed and 20 of approximately 152 held-out test chronics. In particular, Dueling DQN’s value–advantage decomposition is a plausible reason for its strong performance when many actions have similar or redundant effects, but that explanation remains a hypothesis until it is tested across multiple seeds and controlled ablations.</p>
+<p>The next validation stage should therefore:</p>
+<ol type="1">
+<li>train DQN, Dueling DQN, and PPO with at least seeds 0–2;</li>
+<li>evaluate each trained model on the complete fixed test split;</li>
+<li>report paired scenario outcomes and confidence intervals;</li>
+<li>compare the original policy with an invalid/redundant-action mask or a small repeated-request penalty;</li>
+<li>classify failure sequences into persistent overload, protection-driven line loss, illegal action, islanding, and power-flow non-convergence.</li>
+</ol>
+</section>
 <section id="main-findings" class="level2">
 <h2 class="anchored" data-anchor-id="main-findings">Main findings</h2>
 <div class="callout callout-style-default callout-tip callout-titled" title="Takeaway 1 — Best overall security">
@@ -556,9 +1643,7 @@ Sub-millisecond online action selection.
 <h2 class="anchored" data-anchor-id="research-message">Research message</h2>
 <p>This benchmark demonstrates a clear distinction between <strong>maximum security performance</strong> and <strong>fast learned decision making</strong>. Greedy provides the strongest overall security, whereas Dueling DQN offers the most competitive DRL balance between episode survival, overload mitigation, and online inference speed.</p>
 <hr>
-<div class="footer-note">
-<p>This page is structured as a research showcase: <strong>problem → system → method → benchmark → results → findings</strong>. It can be expanded later with training details, reward design, state representation, hyperparameters, additional test seeds, or larger power-grid cases when those results are available.</p>
-</div>
+<p><em>This page is structured as a research showcase: <strong>problem → system → method → benchmark → results → findings</strong>. It can be expanded later with additional training seeds, hyperparameter ablations, the complete held-out test split, or larger power-grid cases.</em></p>
 
 
 </section>
