@@ -124,11 +124,7 @@ flowchart LR
 
 ### Where the 178 candidate actions come from
 
-Grid2Op enumerates **unitary topology actions**: one candidate sets the busbar assignment
-of every controllable element at exactly one substation. It does not combine changes at
-multiple substations and it does not disconnect equipment. Busbar labels are electrically
-symmetric, so the first element is fixed to Busbar 1 to avoid counting the same partition
-twice. Every active busbar must also contain at least one transmission-line endpoint.
+Grid2Op generates topology actions by changing the busbar connections within one substation at a time. Each action represents one possible busbar arrangement for the controllable elements in that substation. Changes at different substations are not combined, and no equipment is disconnected. Because Busbar 1 and Busbar 2 are electrically equivalent, the first element is always assigned to Busbar 1 to avoid generating duplicate arrangements. In addition, each busbar that is used must contain at least one transmission-line connection.
 
 For a substation with $n_s$ connected elements and $m_s$ line endpoints, the formula first
 counts all valid assignments, including the unchanged state in which every element remains
@@ -175,30 +171,61 @@ In short, the formula counts 179 valid assignments, but S7 contributes only its 
 state. Removing that non-action leaves 178 usable **single-substation set-bus actions**.
 This is not the number of all possible full-grid topologies.
 
-### Training-only action ranking
+### [Some explanations]{style="color: #c62828;"}
 
-Candidate selection used only the training chronics. The procedure scanned 1,392 training
-steps and retained 20 stress states satisfying ($\max(\rho) \geq 0.90$). At each stress state, the three most heavily loaded lines were identified, and candidate actions associated with
-their endpoint substations were evaluated. This relevance filter resulted in 108 unique
-candidates being simulated from the original set of 178.
+#### What is a chronic?
 
-Each relevant candidate was assessed with a one-step Grid2Op simulation. Grid risk was
-measured as
+A chronic is a pre-generated time series of load and generation values at five-minute
+intervals. The dataset contains 1,004 chronics, divided into 702 for training, 150 for
+validation, and 152 for testing.
+
+#### How were the stress states selected?
+
+Only the training chronics were used. The grid followed Do-Nothing, and a time step was
+retained when
+
+$$
+\max_i(\rho_i) \geq 0.90.
+$$
+
+The scan stopped after 20 stress states were found. Both 0.90 and 20 are user-defined
+settings.
+
+#### Why were only 108 actions simulated?
+
+At each stress state, the three most heavily loaded lines were identified. Only actions
+at the endpoint substations of these lines were simulated. Across the 20 states, 108 of
+the 178 available topology actions passed this filter.
+
+For each simulated action, grid risk was measured as
 
 $$
 J = \max_i(\rho_i) + 5\sum_i\max(\rho_i-1,0)^2,
 $$
 
-and the non-negative gain of an action was
+and its improvement was
 
 $$
 \Delta J = \max(J_{\mathrm{before}}-J_{\mathrm{after}},0).
 $$
 
-Actions were ranked first by the fraction of stress states in which they reduced ($J$),
-then by mean one-step gain and evaluation count. The highest-ranked 20 topology actions
-were fixed before agent training. A separate global Do-Nothing action, A0, produced the
-final 21-action benchmark. Validation and test chronics were not used in this selection.
+A larger $\Delta J$ means a greater one-step reduction in grid risk. Actions were ranked
+by how often and how strongly they reduced $J$. The best 20 were retained, and A0 was
+added to create the final 21-action set. Validation and test chronics were not used.
+
+| Number | Meaning |
+|---:|---|
+| 1,004 | Supplied chronics |
+| 20 | Training stress states selected |
+| 178 | Available topology actions |
+| 108 | Actions passing the endpoint filter |
+| 20 + A0 | Final 21-action catalogue |
+
+#### What is the limitation?
+
+The endpoint filter saves computation, but it may exclude useful actions at more distant
+substations. Because the grid is connected, a distant topology change can still affect
+line flows. Simulating all 178 actions would give a more complete comparison.
 
 ### The fixed 21-action catalogue
 

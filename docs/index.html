@@ -294,7 +294,7 @@ Best DRL completion rate
 </div>
 <section id="where-the-178-candidate-actions-come-from" class="level3">
 <h3 class="anchored" data-anchor-id="where-the-178-candidate-actions-come-from">Where the 178 candidate actions come from</h3>
-<p>Grid2Op enumerates <strong>unitary topology actions</strong>: one candidate sets the busbar assignment of every controllable element at exactly one substation. It does not combine changes at multiple substations and it does not disconnect equipment. Busbar labels are electrically symmetric, so the first element is fixed to Busbar 1 to avoid counting the same partition twice. Every active busbar must also contain at least one transmission-line endpoint.</p>
+<p>Grid2Op generates topology actions by changing the busbar connections within one substation at a time. Each action represents one possible busbar arrangement for the controllable elements in that substation. Changes at different substations are not combined, and no equipment is disconnected. Because Busbar 1 and Busbar 2 are electrically equivalent, the first element is always assigned to Busbar 1 to avoid generating duplicate arrangements. In addition, each busbar that is used must contain at least one transmission-line connection.</p>
 <p>For a substation with <span class="math inline">\(n_s\)</span> connected elements and <span class="math inline">\(m_s\)</span> line endpoints, the formula first counts all valid assignments, including the unchanged state in which every element remains on Busbar 1:</p>
 <p><span class="math display">\[
 C_s = 2^{n_s-1} - 2^{n_s-m_s} + 1.
@@ -435,18 +435,67 @@ C_s, &amp; C_s\geq2,\\
 </table>
 <p>In short, the formula counts 179 valid assignments, but S7 contributes only its unchanged state. Removing that non-action leaves 178 usable <strong>single-substation set-bus actions</strong>. This is not the number of all possible full-grid topologies.</p>
 </section>
-<section id="training-only-action-ranking" class="level3">
-<h3 class="anchored" data-anchor-id="training-only-action-ranking">Training-only action ranking</h3>
-<p>Candidate selection used only the training chronics. The procedure scanned 1,392 training steps and retained 20 stress states satisfying (<span class="math inline">\(\max(\rho) \geq 0.90\)</span>). At each stress state, the three most heavily loaded lines were identified, and candidate actions associated with their endpoint substations were evaluated. This relevance filter resulted in 108 unique candidates being simulated from the original set of 178.</p>
-<p>Each relevant candidate was assessed with a one-step Grid2Op simulation. Grid risk was measured as</p>
+<section id="some-explanations" class="level3">
+<h3 class="anchored" data-anchor-id="some-explanations"><span style="color: #c62828;">Some explanations</span></h3>
+<section id="what-is-a-chronic" class="level4">
+<h4 class="anchored" data-anchor-id="what-is-a-chronic">What is a chronic?</h4>
+<p>A chronic is a pre-generated time series of load and generation values at five-minute intervals. The dataset contains 1,004 chronics, divided into 702 for training, 150 for validation, and 152 for testing.</p>
+</section>
+<section id="how-were-the-stress-states-selected" class="level4">
+<h4 class="anchored" data-anchor-id="how-were-the-stress-states-selected">How were the stress states selected?</h4>
+<p>Only the training chronics were used. The grid followed Do-Nothing, and a time step was retained when</p>
+<p><span class="math display">\[
+\max_i(\rho_i) \geq 0.90.
+\]</span></p>
+<p>The scan stopped after 20 stress states were found. Both 0.90 and 20 are user-defined settings.</p>
+</section>
+<section id="why-were-only-108-actions-simulated" class="level4">
+<h4 class="anchored" data-anchor-id="why-were-only-108-actions-simulated">Why were only 108 actions simulated?</h4>
+<p>At each stress state, the three most heavily loaded lines were identified. Only actions at the endpoint substations of these lines were simulated. Across the 20 states, 108 of the 178 available topology actions passed this filter.</p>
+<p>For each simulated action, grid risk was measured as</p>
 <p><span class="math display">\[
 J = \max_i(\rho_i) + 5\sum_i\max(\rho_i-1,0)^2,
 \]</span></p>
-<p>and the non-negative gain of an action was</p>
+<p>and its improvement was</p>
 <p><span class="math display">\[
 \Delta J = \max(J_{\mathrm{before}}-J_{\mathrm{after}},0).
 \]</span></p>
-<p>Actions were ranked first by the fraction of stress states in which they reduced (<span class="math inline">\(J\)</span>), then by mean one-step gain and evaluation count. The highest-ranked 20 topology actions were fixed before agent training. A separate global Do-Nothing action, A0, produced the final 21-action benchmark. Validation and test chronics were not used in this selection.</p>
+<p>A larger <span class="math inline">\(\Delta J\)</span> means a greater one-step reduction in grid risk. Actions were ranked by how often and how strongly they reduced <span class="math inline">\(J\)</span>. The best 20 were retained, and A0 was added to create the final 21-action set. Validation and test chronics were not used.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Number</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1,004</td>
+<td>Supplied chronics</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">20</td>
+<td>Training stress states selected</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">178</td>
+<td>Available topology actions</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">108</td>
+<td>Actions passing the endpoint filter</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">20 + A0</td>
+<td>Final 21-action catalogue</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="what-is-the-limitation" class="level4">
+<h4 class="anchored" data-anchor-id="what-is-the-limitation">What is the limitation?</h4>
+<p>The endpoint filter saves computation, but it may exclude useful actions at more distant substations. Because the grid is connected, a distant topology change can still affect line flows. Simulating all 178 actions would give a more complete comparison.</p>
+</section>
 </section>
 <section id="the-fixed-21-action-catalogue" class="level3">
 <h3 class="anchored" data-anchor-id="the-fixed-21-action-catalogue">The fixed 21-action catalogue</h3>
