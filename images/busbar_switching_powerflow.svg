@@ -12,7 +12,10 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
   <sodipodi:namedview
      id="namedview61"
      pagecolor="#ffffff"
@@ -22,9 +25,9 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.44914375"
-     inkscape:cx="1105.4367"
-     inkscape:cy="719.14615"
+     inkscape:zoom="0.31759259"
+     inkscape:cx="1684.5481"
+     inkscape:cy="736.79301"
      inkscape:window-width="1600"
      inkscape:window-height="930"
      inkscape:window-x="-6"
@@ -93,6 +96,58 @@
          fill="#0f766e"
          id="path4" />
     </marker>
+    <marker
+       id="red-4"
+       markerUnits="userSpaceOnUse"
+       markerWidth="14"
+       markerHeight="14"
+       refX="12"
+       refY="7"
+       orient="auto">
+      <path
+         d="M 0,0 14,7 0,14 Z"
+         fill="#dc2626"
+         id="path2-5" />
+    </marker>
+    <marker
+       id="red-7"
+       markerUnits="userSpaceOnUse"
+       markerWidth="14"
+       markerHeight="14"
+       refX="12"
+       refY="7"
+       orient="auto">
+      <path
+         d="M 0,0 14,7 0,14 Z"
+         fill="#dc2626"
+         id="path2-1" />
+    </marker>
+    <marker
+       id="dark-1"
+       markerUnits="userSpaceOnUse"
+       markerWidth="14"
+       markerHeight="14"
+       refX="12"
+       refY="7"
+       orient="auto">
+      <path
+         d="M 0,0 14,7 0,14 Z"
+         fill="#334155"
+         id="path1-6" />
+    </marker>
+    <marker
+       id="green-1"
+       markerUnits="userSpaceOnUse"
+       markerWidth="14"
+       markerHeight="14"
+       refX="12"
+       refY="7"
+       orient="auto">
+      <path
+         d="M 0,0 14,7 0,14 Z"
+         fill="#16a34a"
+         id="path3-8" />
+    </marker>
   </defs>
   <rect
      class="bg"
@@ -120,8 +175,8 @@
      class="panel"
      id="rect5" />
   <rect
-     x="1065"
-     y="105"
+     x="1038.8391"
+     y="94.424324"
      width="790"
      height="820"
      rx="22"
@@ -160,14 +215,34 @@
      text-anchor="middle"
      class="tiny"
      id="text9">remote grid</text>
+  <path
+     d="m 599.22538,394.20462 v 138.35391 h 48.69793"
+     class="over"
+     style="marker-end:url(#red)"
+     id="path21" />
   <rect
-     x="675"
-     y="270"
-     width="120"
-     height="62"
-     rx="12"
-     class="device"
-     id="rect9" />
+     x="675.24188"
+     y="273.45172"
+     width="119.19278"
+     height="59.14613"
+     rx="7.4495487"
+     class="goodbox"
+     id="rect47-9-2"
+     style="fill:#f0fdf4;stroke:#16a34a;stroke-width:2.87428" />
+  <rect
+     x="1707.1047"
+     y="573.4342"
+     width="119.19278"
+     height="59.14613"
+     rx="7.4495487"
+     class="goodbox"
+     id="rect47-9-2-1"
+     style="fill:#f0fdf4;stroke:#16a34a;stroke-width:2.87428" />
+  <path
+     d="m 620.42566,389.93294 v -94 h 50"
+     class="safe"
+     style="fill:none;stroke:#16a34a;stroke-width:8;stroke-linecap:round;marker-end:url(#green-1)"
+     id="path46-2" />
   <text
      x="735"
      y="296"
@@ -180,26 +255,6 @@
      text-anchor="middle"
      class="tiny"
      id="text11">remote grid</text>
-  <rect
-     x="675"
-     y="560"
-     width="120"
-     height="62"
-     rx="12"
-     class="device"
-     id="rect11" />
-  <text
-     x="735"
-     y="586"
-     text-anchor="middle"
-     class="label"
-     id="text12">Area C</text>
-  <text
-     x="735"
-     y="609"
-     text-anchor="middle"
-     class="tiny"
-     id="text13">remote grid</text>
   <line
      x1="255"
      y1="395"
@@ -232,6 +287,11 @@
      class="normal"
      style="marker-end:url(#dark)"
      id="path15" />
+  <path
+     d="m 1238.5262,594.13265 h 50 v 94"
+     class="normal"
+     style="fill:none;stroke:#334155;stroke-width:7;stroke-linecap:round;marker-end:url(#dark-1)"
+     id="path15-5" />
   <text
      x="225"
      y="263"
@@ -245,6 +305,15 @@
      rx="10"
      class="flowbox"
      id="rect16" />
+  <rect
+     x="1211.0117"
+     y="496.9971"
+     width="160"
+     height="48"
+     rx="10"
+     class="flowbox"
+     id="rect16-6"
+     style="fill:#ffffff;stroke:#94a3b8;stroke-width:2" />
   <text
      x="280"
      y="217"
@@ -259,25 +328,24 @@
      class="tiny"
      id="text18"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif">limit 100; ρ=80%</text>
-  <path
-     d="M625 395V301H675"
-     class="normal"
-     style="marker-end:url(#dark)"
-     id="path18" />
   <text
      x="655"
      y="263"
      text-anchor="end"
      class="lineName"
-     id="text19">Line B</text>
+     id="text19"
+     style="font-style:normal;font-variant:normal;font-weight:700;font-stretch:normal;font-size:20px;line-height:normal;font-family:Arial, sans-serif"><tspan
+       style="font-size:21.3333px;fill:#44aa00"
+       id="tspan27">LineB</tspan></text>
   <rect
-     x="552"
-     y="193"
+     x="550.0481"
+     y="191.96648"
      width="160"
      height="48"
      rx="10"
-     class="flowbox"
-     id="rect19" />
+     class="goodbox"
+     id="rect47-9"
+     style="fill:#f0fdf4;stroke:#16a34a;stroke-width:3" />
   <text
      x="630"
      y="215"
@@ -293,29 +361,39 @@
      id="text21"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif">limit 100; ρ=50%</text>
   <path
-     d="M625 395V591H675"
+     d="m 1615.5455,264.0882 v 113.29331 h 58.3669"
      class="over"
-     style="marker-end:url(#red)"
-     id="path21" />
-  <text
-     x="594"
-     y="465"
-     text-anchor="end"
-     class="lineName"
-     fill="#dc2626"
-     id="text22"
-     style="font-style:normal;font-variant:normal;font-weight:700;font-stretch:normal;font-size:20px;line-height:normal;font-family:Arial, sans-serif">Line C</text>
+     style="fill:none;stroke:#dc2626;stroke-width:8.21432;stroke-linecap:round;marker-end:url(#red-7)"
+     id="path21-5" />
   <rect
      x="645"
-     y="451"
+     y="401"
      width="170"
      height="62"
      rx="10"
      class="badbox"
      id="rect22" />
+  <rect
+     x="1671.7012"
+     y="232.00438"
+     width="170"
+     height="62"
+     rx="10"
+     class="badbox"
+     id="rect22-2"
+     style="fill:#fef2f2;stroke:#dc2626;stroke-width:3" />
+  <rect
+     x="1689.0535"
+     y="336.65332"
+     width="97.802269"
+     height="66.710587"
+     rx="5.7530742"
+     class="badbox"
+     id="rect22-2-7"
+     style="fill:#fef2f2;stroke:#dc2626;stroke-width:2.36033" />
   <text
      x="730"
-     y="476"
+     y="426"
      text-anchor="middle"
      class="label"
      fill="#b91c1c"
@@ -323,7 +401,7 @@
      style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">→ 40 MW</text>
   <text
      x="730"
-     y="500"
+     y="450"
      text-anchor="middle"
      class="small"
      fill="#b91c1c"
@@ -433,183 +511,161 @@
      class="small"
      id="text35">others unchanged</text>
   <!-- AFTER external areas and buses -->
+  <!-- After lines A/B -->
   <rect
-     x="1105"
-     y="270"
+     x="1113"
+     y="572"
      width="120"
      height="62"
      rx="12"
      class="device"
      id="rect35" />
   <text
-     x="1165"
-     y="296"
+     x="1173"
+     y="598"
      text-anchor="middle"
      class="label"
-     id="text36">Area A</text>
+     id="text36"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Area A</text>
   <text
-     x="1165"
-     y="319"
+     x="1173"
+     y="621"
      text-anchor="middle"
      class="tiny"
-     id="text37">remote grid</text>
-  <rect
-     x="1695"
-     y="270"
-     width="120"
-     height="62"
-     rx="12"
-     class="device"
-     id="rect37" />
+     id="text37"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif">remote grid</text>
   <text
-     x="1755"
-     y="296"
+     x="1763"
+     y="598"
      text-anchor="middle"
      class="label"
-     id="text38">Area B</text>
+     id="text38"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Area B</text>
   <text
-     x="1755"
-     y="319"
+     x="1763"
+     y="621"
      text-anchor="middle"
      class="tiny"
-     id="text39">remote grid</text>
-  <rect
-     x="1695"
-     y="560"
-     width="120"
-     height="62"
-     rx="12"
-     class="device"
-     id="rect39" />
-  <text
-     x="1755"
-     y="586"
-     text-anchor="middle"
-     class="label"
-     id="text40">Area C</text>
-  <text
-     x="1755"
-     y="609"
-     text-anchor="middle"
-     class="tiny"
-     id="text41">remote grid</text>
-  <line
-     x1="1275"
-     y1="500"
-     x2="1645"
-     y2="500"
-     class="bus1"
-     id="line41" />
-  <text
-     x="1460"
-     y="478"
-     text-anchor="middle"
-     class="label"
-     id="text42"
-     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Busbar 1: Gen + Load + Line C</text>
-  <line
-     x1="1275"
-     y1="395"
-     x2="1645"
-     y2="395"
-     class="bus2"
-     id="line42" />
-  <text
-     x="1460"
-     y="370"
-     text-anchor="middle"
-     class="label"
-     id="text43">Busbar 2: Line A + Line B</text>
-  <!-- After lines A/B -->
+     id="text39"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif">remote grid</text>
   <path
-     d="M1225 301H1275V395"
+     d="m 1653,697 v -94 h 50"
      class="safe"
      style="marker-end:url(#green)"
-     id="path43" />
+     id="path46" />
+  <line
+     x1="1283"
+     y1="697"
+     x2="1653"
+     y2="697"
+     class="bus2"
+     id="line42" />
+  <line
+     x1="257.9613"
+     y1="676.73541"
+     x2="627.9613"
+     y2="676.73541"
+     class="bus2"
+     id="line42-8"
+     style="stroke:#f97316;stroke-width:18;stroke-linecap:round" />
   <text
-     x="1245"
-     y="263"
+     x="1468"
+     y="672"
+     text-anchor="middle"
+     class="label"
+     id="text43"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Busbar 2: Line A + Line B</text>
+  <text
+     x="1253"
+     y="565"
      class="lineName"
-     id="text44">Line A</text>
-  <rect
-     x="1202"
-     y="193"
-     width="160"
-     height="48"
-     rx="10"
-     class="goodbox"
-     id="rect44" />
+     id="text44"
+     style="font-style:normal;font-variant:normal;font-weight:700;font-stretch:normal;font-size:20px;line-height:normal;font-family:Arial, sans-serif">Line A</text>
   <text
-     x="1282"
-     y="215"
+     x="1290"
+     y="517"
      text-anchor="middle"
      class="label"
      id="text45"
      style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">60 MW →</text>
   <text
-     x="1282"
-     y="235"
+     x="1290"
+     y="537"
      text-anchor="middle"
      class="tiny"
      id="text46"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif">limit 100; ρ=60%</text>
-  <path
-     d="M1645 395V301H1695"
-     class="safe"
-     style="marker-end:url(#green)"
-     id="path46" />
   <text
-     x="1675"
-     y="263"
+     x="1683"
+     y="565"
      text-anchor="end"
      class="lineName"
-     id="text47">Line B</text>
+     id="text47"
+     style="font-style:normal;font-variant:normal;font-weight:700;font-stretch:normal;font-size:20px;line-height:normal;font-family:Arial, sans-serif"><tspan
+       style="font-size:21.3333px;fill:#44aa00"
+       id="tspan28">Line B</tspan></text>
   <rect
-     x="1570"
-     y="193"
+     x="1578"
+     y="495"
      width="160"
      height="48"
      rx="10"
      class="goodbox"
      id="rect47" />
   <text
-     x="1650"
-     y="215"
+     x="1658"
+     y="517"
      text-anchor="middle"
      class="label"
      id="text48"
      style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">→ 60 MW</text>
   <text
-     x="1650"
-     y="235"
+     x="1658"
+     y="537"
      text-anchor="middle"
      class="tiny"
      id="text49"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif">limit 100; ρ=60%</text>
   <!-- After line C -->
-  <path
-     d="M1645 500V591H1695"
-     class="safe"
-     style="marker-end:url(#green)"
-     id="path49" />
+  <!-- After generator and load -->
   <text
-     x="1724"
-     y="553"
+     x="1739"
+     y="370"
+     text-anchor="middle"
+     class="label"
+     id="text40"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Area C</text>
+  <text
+     x="1739"
+     y="393"
+     text-anchor="middle"
+     class="tiny"
+     id="text41"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif">remote grid</text>
+  <line
+     x1="1275"
+     y1="268"
+     x2="1645"
+     y2="268"
+     class="bus1"
+     id="line41" />
+  <text
+     x="1460"
+     y="246"
+     text-anchor="middle"
+     class="label"
+     id="text42"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Busbar 1: Gen + Load + Line C</text>
+  <text
+     x="1694"
+     y="321"
      text-anchor="end"
      class="lineName"
      id="text50"
-     style="font-style:normal;font-variant:normal;font-weight:700;font-stretch:normal;font-size:20px;line-height:normal;font-family:Arial, sans-serif">Line C</text>
-  <rect
-     x="1660"
-     y="463"
-     width="185"
-     height="62"
-     rx="10"
-     class="goodbox"
-     id="rect50" />
+     style="font-style:normal;font-variant:normal;font-weight:700;font-stretch:normal;font-size:20px;line-height:normal;font-family:Arial, sans-serif" />
   <text
      x="1752"
-     y="488"
+     y="256"
      text-anchor="middle"
      class="label"
      fill="#15803d"
@@ -617,51 +673,53 @@
      style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">→ 10 MW</text>
   <text
      x="1752"
-     y="512"
+     y="280"
      text-anchor="middle"
      class="small"
      fill="#15803d"
      id="text52"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18px;line-height:normal;font-family:Arial, sans-serif">limit 35; ρ=29%</text>
-  <!-- After generator and load -->
   <circle
      cx="1350"
-     cy="650"
+     cy="418"
      r="43"
      class="device"
      id="circle52" />
   <text
      x="1350"
-     y="646"
+     y="414"
      text-anchor="middle"
      class="label"
-     id="text53">Gen</text>
+     id="text53"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Gen</text>
   <text
      x="1350"
-     y="671"
+     y="439"
      text-anchor="middle"
      class="small"
-     id="text54">20 MW</text>
+     id="text54"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18px;line-height:normal;font-family:Arial, sans-serif">20 MW</text>
   <path
-     d="M1350 607V500"
+     d="M 1350,375 V 268"
      class="normal"
      style="marker-end:url(#dark)"
      id="path54" />
   <path
-     d="M1530 500V610"
+     d="M 1530,268 V 378"
      class="normal"
      style="marker-end:url(#dark)"
      id="path55" />
   <path
-     d="M1490 610H1570L1530 670Z"
+     d="m 1490,378 h 80 l -40,60 z"
      class="device"
      id="path56" />
   <text
      x="1530"
-     y="700"
+     y="468"
      text-anchor="middle"
      class="label"
-     id="text56">Load 10 MW</text>
+     id="text56"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif">Load 10 MW</text>
   <rect
      x="1200"
      y="760"
@@ -710,4 +768,69 @@
      text-anchor="middle"
      class="small"
      id="text61">The resulting flows must be recomputed by the power-flow model; these illustrative MW values show the mechanism, not a reported experimental action.</text>
+  <text
+     xml:space="preserve"
+     style="font-size:21.3333px;writing-mode:lr-tb;direction:ltr;fill:#000000"
+     x="1635.8821"
+     y="327.60052"
+     id="text27"><tspan
+       sodipodi:role="line"
+       id="tspan6"
+       x="1635.8821"
+       y="327.60052"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, ';fill:#ff2a2a">Line C</tspan></text>
+  <rect
+     x="654.18018"
+     y="499.18018"
+     width="97.802269"
+     height="66.710587"
+     rx="5.7530742"
+     class="badbox"
+     id="rect22-2-7-1"
+     style="fill:#fef2f2;stroke:#dc2626;stroke-width:2.36033" />
+  <text
+     x="704.12671"
+     y="532.52686"
+     text-anchor="middle"
+     class="label"
+     id="text40-4"
+     style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:21px;line-height:normal;font-family:Arial, sans-serif;fill:#27364f">Area C</text>
+  <text
+     x="704.12671"
+     y="555.52686"
+     text-anchor="middle"
+     class="tiny"
+     id="text41-2"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:normal;font-family:Arial, sans-serif;fill:#64748b">remote grid</text>
+  <text
+     xml:space="preserve"
+     style="font-size:21.3333px;writing-mode:lr-tb;direction:ltr;fill:#000000"
+     x="609.39587"
+     y="486.53122"
+     id="text27-2"><tspan
+       sodipodi:role="line"
+       id="tspan6-2"
+       x="609.39587"
+       y="486.53122"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, ';fill:#ff2a2a">Line C</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-size:21.3333px;writing-mode:lr-tb;direction:ltr;fill:#000000"
+     x="631.73401"
+     y="352.28632"
+     id="text27-2-4"><tspan
+       sodipodi:role="line"
+       id="tspan6-2-3"
+       x="631.73401"
+       y="352.28632"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, ';fill:#55d400" /></text>
+  <metadata
+     id="metadata28">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Illustrative power-flow redistribution before and after substation busbar switching</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
 </svg>
