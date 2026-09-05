@@ -1,247 +1,327 @@
 ---
 title: "Deep Reinforcement Learning for Power Grid Topology Control"
-subtitle: "Benchmarking topology reconfiguration for secure and efficient grid operation"
+
 title-block-banner: false
 ---
 
 <div class="hero">
-<div class="hero-kicker">POWER GRID · DEEP REINFORCEMENT LEARNING · TOPOLOGY CONTROL</div>
+<div class="hero-kicker">POWER GRID · TOPOLOGY CONTROL · DEEP REINFORCEMENT LEARNING</div>
 
-# Deep Reinforcement Learning for Power Grid Topology Control
+# Keeping a Power Grid Safe with Topology Control
 
 <p class="hero-subtitle">
-This study evaluates whether deep reinforcement learning can improve power-grid security
-by changing substation busbar connections, redistributing power flows, and reducing
-transmission-line overloads.
+Electricity demand changes throughout the day. This changes the power carried by each
+transmission line. In this study, several controllers try to prevent line overloads by
+changing connections inside substations.
 </p>
 
 <div class="metric-grid">
-<div class="metric-card">
-<div class="metric-value">IEEE 14-bus</div>
-<div class="metric-label">Test system</div>
-</div>
-<div class="metric-card">
-<div class="metric-value">5 min</div>
-<div class="metric-label">Decision interval</div>
-</div>
-<div class="metric-card">
-<div class="metric-value">21</div>
-<div class="metric-label">Available actions</div>
-</div>
-<div class="metric-card">
-<div class="metric-value">95%</div>
-<div class="metric-label">Best DRL completion rate</div>
-</div>
+<div class="metric-card"><div class="metric-value">14</div><div class="metric-label">Substations</div></div>
+<div class="metric-card"><div class="metric-value">5 min</div><div class="metric-label">One decision step</div></div>
+<div class="metric-card"><div class="metric-value">21</div><div class="metric-label">Available actions</div></div>
+<div class="metric-card"><div class="metric-value">7 days</div><div class="metric-label">One test episode</div></div>
 </div>
 </div>
 
-## Research question
+## 1. What problem are we trying to solve?
 
-Power generation and load demand vary over time, which can create highly loaded operating
-conditions.
+Power does not follow a route chosen by an operator. It spreads through all available
+paths according to the electrical properties of the network. When generation or demand
+changes, the power flow also changes. A line that was safe in the morning may become
+heavily loaded later in the day.
 
-### Conceptual correction: market redispatch is not topology control
+For each transmission line $i$, Grid2Op reports a loading ratio
 
-An initial assumption was that PJM congestion management and substation topology control were
-the same process. **That assumption was incorrect.** PJM primarily uses security-constrained
-generation redispatch, which changes nodal power injections while normally retaining the network
-topology. In contrast, this study changes busbar connections while the agent does not directly
-control generation or demand. Both approaches redistribute line flows, but through different
-control variables. Machine learning and DRL are decision-making tools, not the research problem.
+$$
+\rho_i=\frac{\text{current carried by line }i}
+{\text{thermal current limit of line }i}.
+$$
 
-The fundamental research question is therefore:
+::: {.rho-table}
+| State | Loading ratio | Meaning |
+|---|:---:|---|
+| Safe | $\rho_i\leq0.90$ | Below the warning level used in this study. |
+| Warning | $0.90<\rho_i\leq1.00$ | Close to the limit, but not overloaded. |
+| Overloaded | $\rho_i>1.00$ | Current exceeds the line's thermal limit. |
+:::
 
-> **To what extent can substation topology reconfiguration mitigate transmission-line
-> overloads and maintain secure operation under time-varying generation and demand, without
-> directly redispatching generation or shedding load?**
+An overload does **not** mean an immediate blackout. Grid2Op can allow a short overload.
+If it continues or becomes severe, protection may disconnect the line. The system reaches
+blackout only when the remaining grid can no longer operate, for example after cascading
+disconnections, islanding, or failure of the power-flow calculation.
 
-DRL is evaluated as one method for selecting topology actions and is compared with Greedy
-action-by-action search. These actions do not add transmission lines; they only change existing
-busbar connections.
+> **Main question:** Can a controller change substation connections at the right time to
+> reduce overloads and keep the grid operating for seven days?
 
-### How a busbar-switching action changes power flow
+## 2. What grid and data are used?
 
-The example below illustrates the physical meaning of one topology-control action. Before
-switching, all equipment is connected to Busbar 1 and Line C is overloaded. The action
-moves the terminals of Line A and Line B to Busbar 2 while leaving the generator, load,
-and Line C on Busbar 1. Splitting the original electrical node changes the available flow
-paths, so the power-flow solution and line-loading ratios are redistributed.
+The experiment uses the IEEE 14-bus system implemented in Grid2Op. It contains 14
+substations, 20 transmission lines, 6 generators, and 11 loads.
 
 ::: {.figure-panel}
-![](images/busbar_switching_powerflow.svg){fig-alt="Illustrative comparison of power flows before and after transferring Line A and Line B from Busbar 1 to Busbar 2 within a substation" width="100%"}
+![](images/case14_topology.png){fig-alt="IEEE 14-bus test grid with numbered substations and transmission lines" width="100%"}
+:::
+
+The network layout and electrical parameters come from the downloaded
+`l2rpn_case14_sandbox` environment. This project did not generate new load or generation
+profiles. For this benchmark, the original line thermal limits are multiplied by 1.05;
+the load and generation time series are unchanged.
+
+### What is stored in the dataset?
+
+Each chronic folder contains the following time series:
+
+| File | Values at each time step | Unit |
+|---|---|---|
+| `load_p` | Active power demand of 11 loads | MW |
+| `load_q` | Reactive power demand of 11 loads | MVAr |
+| `prod_p` | Active power output of 6 generators | MW |
+| `prod_v` | Voltage set points of 6 generators | kV |
+| `*_forecasted` | Forecasts of the same variables | Same as the corresponding variable |
+
+The forecast files support Grid2Op's one-step look-ahead simulation. Greedy uses this
+look-ahead when it tests candidate actions. The DRL agents do not receive these forecasts
+directly.
+
+### What is a chronic?
+
+A **chronic** is one stored time series of load and generation values. It is not one
+five-minute record. Each chronic has 8,065 records at five-minute intervals, allowing up
+to 8,064 transitions, or 28 days. This experiment stops each episode after 2,016 steps,
+so one episode covers 7 days.
+
+### How are the data divided?
+
+The dataset contains 1,004 chronics. This project divides them into 702 for training, 150
+for validation, and 152 for testing. The reported comparison uses 20 fixed test chronics.
+Every controller receives exactly the same load and generation sequence in a given test.
+
+| Term | Meaning in this experiment |
+|---|---|
+| One time step | 5 minutes |
+| One episode | 2,016 steps, or 7 days |
+| One test scenario | One held-out chronic used for one episode |
+| Scenario `0851` | Dataset folder `chronics/0851`, not random seed 851 |
+
+### How do these data become a grid state?
+
+The CSV files provide inputs, not measured line flows. At each step, Grid2Op combines the
+current load and generation values with the network and its current topology, then runs an
+AC power-flow calculation. This produces bus voltages, line power flows, line currents,
+and the loading ratio $\rho$ used by the controller. Section 4 lists the smaller set of
+variables given directly to the DRL agents.
+
+## 3. What can the controller change?
+
+The controller cannot build a new line, reduce customer demand, or directly change
+generator output. It can only change which devices are connected to Busbar 1 or Busbar 2
+inside one substation.
+
+A **busbar** is a conductor inside a substation that forms an electrical connection point.
+Devices connected to the same busbar belong to the same electrical node. Moving selected
+line terminals, generators, or loads to the second busbar splits one node into two nodes.
+The external transmission lines remain physically unchanged, but their electrical
+connections change. The next power-flow calculation can therefore distribute power
+differently across the existing network.
+
+::: {.figure-panel}
+![A simplified example showing how splitting one substation busbar changes the electrical paths and redistributes power among existing transmission lines.](images/busbar_switching_powerflow.svg){fig-alt="Simplified before-and-after diagram of power-flow redistribution caused by substation busbar switching" width="100%"}
 :::
 
 <div class="mini-note">
-<strong>Illustrative example:</strong> the MW values in this diagram explain the switching
-mechanism and satisfy nodal power balance; they are not measurements from a reported
-Case14 test action. The action changes existing electrical connections and does not add
-a new transmission line.
+<strong>How to read this diagram:</strong> no transmission line is added. The switching
+action only separates equipment inside the substation into two electrical nodes. This
+changes the available network paths, so the same generation and demand can produce
+different line flows. The numbers are a simple illustration, not measured results from
+Case14 action A1.
 </div>
 
-## Test system
-
-The study uses the IEEE 14-bus power grid implemented in **Grid2Op**. It contains
-14 substations, 20 transmission lines, 6 generators, and 11 loads. Power generation and
-load demand change every five minutes.
+### What does a real busbar look like?
 
 ::: {.figure-panel}
-![](images/case14_topology.png){fig-alt="Grid2Op Case14 topology showing substations, transmission lines, generators, and loads" width="100%"}
+![](images/substation_busbars_and_switchgear_annotated.png){fig-alt="Annotated aerial photograph of a 230 kV substation, with arrows identifying a busbar, a disconnector, and a circuit breaker" width="100%"}
 :::
 
 <div class="mini-note">
-<strong>Episode definition:</strong> each episode represents seven days, corresponding to
-2,016 five-minute time steps.
+<strong>How to read the photograph:</strong> the long, parallel metal conductors are the
+busbars. Insulators hold them above the grounded steel frames. Circuit breakers and
+disconnectors connect a transmission-line terminal to a selected busbar. The steel
+frames support the equipment; they are not the busbars. Each colored label identifies one
+representative device; other devices of the same type are also present. Photo: Rsparks3,
+<a href="https://commons.wikimedia.org/wiki/File:Substation_busbars_and_breakers.jpg">Wikimedia Commons</a>,
+<a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>; annotations added.
 </div>
 
-## DRL topology-control framework
+### How is topology changed in a real substation?
 
-```{mermaid}
-flowchart LR
-    A["Current grid state"] --> B["DRL agent"]
-    B --> C["Select one of 21 actions"]
-    C --> D["Change busbar connection<br/>or Do Nothing"]
-    D --> E["Power-flow redistribution"]
-    E --> F["Line loading / grid security"]
-    F --> A
-```
+Changing topology is a controlled procedure, not a single button press. A typical
+high-level workflow is:
 
-At each time step, the agent observes the current grid state and selects one action.
-The resulting topology determines how power is redistributed before the next decision.
+1. **Plan the target topology.** Engineers check the expected power flow, equipment
+   limits, and the effect of a possible failure.
+2. **Approve the switching order.** The control room prepares and authorizes a written
+   sequence of operations.
+3. **Check the system.** Operators confirm equipment status, protection settings,
+   interlocks, and communication with field staff.
+4. **Control the current with circuit breakers.** Where current must be interrupted, a
+   circuit breaker opens the energized circuit. A disconnector is not normally used to
+   interrupt load current.
+5. **Change the busbar connection with disconnectors.** After the required electrical
+   conditions are satisfied, disconnectors connect a line, load, or generator bay to the
+   selected busbar. The exact order depends on the substation layout.
+6. **Restore and verify operation.** The required circuit breakers are closed, and the
+   control room checks switch positions, voltage, current, alarms, and the new power flow.
 
-## Action-space design
+These are only the main stages. A real switching order may contain many more checks and
+operations, and trained operators must follow the approved rules for that substation.
 
-The action space is fixed before DRL training so that all learning algorithms and the
-Greedy controller are compared using exactly the same actions.
+**Grid2Op keeps only the result needed for the power-flow study.** In this simulation, an
+action such as A1 directly states the final busbar assignment of the affected devices. The
+environment applies that connectivity and calculates the next electrical state. 
 
-```{mermaid}
-flowchart LR
-    A["178 candidate<br/>topology actions"] --> B["Test on 20 highly<br/>loaded grid states"]
-    B --> C["Rank by overload reduction<br/>and valid power flow"]
-    C --> D["Select best 20<br/>topology actions"]
-    D --> E["+ 1 Do-Nothing action"]
-    E --> F["21-action<br/>benchmark space"]
-```
+### What does action A1 do in Case14?
 
-### Where the 178 candidate actions come from
+Before A1, **L1, L17, L4, L6, and Load 3 are all connected to Busbar 1 at S4**. They form
+one electrical node. A1 changes only the internal connections at S4:
 
-Grid2Op generates topology actions by changing the busbar connections within one substation at a time. Each action represents one possible busbar arrangement for the controllable elements in that substation. Changes at different substations are not combined, and no equipment is disconnected. Because Busbar 1 and Busbar 2 are electrically equivalent, the first element is always assigned to Busbar 1 to avoid generating duplicate arrangements. In addition, each busbar that is used must contain at least one transmission-line connection.
-
-For a substation with $n_s$ connected elements and $m_s$ line endpoints, the formula first
-counts all valid assignments, including the unchanged state in which every element remains
-on Busbar 1:
-
-$$
-C_s = 2^{n_s-1} - 2^{n_s-m_s} + 1.
-$$
-
-Grid2Op keeps these assignments as actions only when at least two valid choices exist.
-If $C_s=1$, the only choice is the unchanged state, so Grid2Op returns zero actions:
-
-$$
-N_s=
-\begin{cases}
-C_s, & C_s\geq2,\\
-0, & C_s=1.
-\end{cases}
-$$
-
-S7 makes this distinction clear. It has two elements but only one line endpoint. A split
-would leave one busbar without a line connection, so the split is invalid. Its only valid
-assignment is the unchanged state: $C_7=1$, but Grid2Op returns $N_7=0$ actions.
-
-| Substation | Elements ($n_s$) | Line endpoints ($m_s$) | Formula count ($C_s$) | Returned actions ($N_s$) |
-|---:|---:|---:|---:|---:|
-| S0 | 3 | 2 | 3 | 3 |
-| S1 | 6 | 4 | 29 | 29 |
-| S2 | 4 | 2 | 5 | 5 |
-| S3 | 6 | 5 | 31 | 31 |
-| S4 | 5 | 4 | 15 | 15 |
-| S5 | 7 | 4 | 57 | 57 |
-| S6 | 3 | 3 | 4 | 4 |
-| **S7** | **2** | **1** | **1** | **0** |
-| S8 | 5 | 4 | 15 | 15 |
-| S9 | 3 | 2 | 3 | 3 |
-| S10 | 3 | 2 | 3 | 3 |
-| S11 | 3 | 2 | 3 | 3 |
-| S12 | 4 | 3 | 7 | 7 |
-| S13 | 3 | 2 | 3 | 3 |
-| **Total** |  |  | **179** | **178** |
-
-In short, the formula counts 179 valid assignments, but S7 contributes only its unchanged
-state. Removing that non-action leaves 178 usable **single-substation set-bus actions**.
-This is not the number of all possible full-grid topologies.
-
-### [Some explanations]{style="color: #c62828;"}
-
-#### What is a chronic?
-
-A chronic is a pre-generated time series of load and generation values at five-minute
-intervals. The dataset contains 1,004 chronics, divided into 702 for training, 150 for
-validation, and 152 for testing.
-
-#### How were the stress states selected?
-
-Only the training chronics were used. The grid followed Do-Nothing, and a time step was
-retained when
-
-$$
-\max_i(\rho_i) \geq 0.90.
-$$
-
-The scan stopped after 20 stress states were found. Both 0.90 and 20 are user-defined
-settings.
-
-#### Why were only 108 actions simulated?
-
-At each stress state, the three most heavily loaded lines were identified. Only actions
-at the endpoint substations of these lines were simulated. Across the 20 states, 108 of
-the 178 available topology actions passed this filter.
-
-For each simulated action, grid risk was measured as
-
-$$
-J = \max_i(\rho_i) + 5\sum_i\max(\rho_i-1,0)^2,
-$$
-
-and its improvement was
-
-$$
-\Delta J = \max(J_{\mathrm{before}}-J_{\mathrm{after}},0).
-$$
-
-A larger $\Delta J$ means a greater one-step reduction in grid risk. Actions were ranked
-by how often and how strongly they reduced $J$. The best 20 were retained, and A0 was
-added to create the final 21-action set. Validation and test chronics were not used.
-
-| Number | Meaning |
-|---:|---|
-| 1,004 | Supplied chronics |
-| 20 | Training stress states selected |
-| 178 | Available topology actions |
-| 108 | Actions passing the endpoint filter |
-| 20 + A0 | Final 21-action catalogue |
-
-#### What is the limitation?
-
-The endpoint filter saves computation, but it may exclude useful actions at more distant
-substations. Because the grid is connected, a distant topology change can still affect
-line flows. Simulating all 178 actions would give a more complete comparison.
-
-### The fixed 21-action catalogue
+- **S4-B2:** L1 and L17;
+- **S4-B1:** L4, L6, and Load 3.
 
 ::: {.figure-panel}
-![](images/case14_action_catalogue.png){fig-alt="Heatmap of the 20 selected Case14 topology actions showing busbar assignments and their training-only ranking scores" width="100%"}
+![](images/case14_topology_after_A1.png){fig-alt="Case14 network after action A1, with substation S4 split into S4-B1 and S4-B2" width="100%"}
 :::
 
-In panel **a**, blue cells assign a device to Busbar 1, orange cells assign it to
-Busbar 2, and grey cells indicate a substation unaffected by that action. A line label such
-as `L9@S12` denotes the endpoint of Line 9 located at Substation 12. In panel **b**, the
-lower horizontal axis reports the percentage of the 20 training stress states improved by
-each action; the upper axis and black diamonds report the mean one-step score reduction.
+The two new nodes are not directly connected inside S4. However, they can still be linked
+indirectly through other substations and transmission lines. No line is added or moved.
+Only its endpoint connection inside S4 changes. This changes the network equations, so the
+next power-flow calculation can redistribute power over the existing lines.
 
-The table below lists the Busbar 2 members for each action. All other devices at the same
-substation are explicitly assigned to Busbar 1.
+## 4. What happens every five minutes?
 
+<div class="simulation-flow">
+<div class="simulation-step"><span class="step-number">1</span><div><strong>Read the new data</strong><br><span>Update load and generation, then calculate the current AC power flow.</span></div></div>
+<div class="flow-arrow">&darr;</div>
+<div class="simulation-step"><span class="step-number">2</span><div><strong>Choose an action</strong><br><span>The controller observes the grid and selects one of 21 actions.</span></div></div>
+<div class="flow-arrow">&darr;</div>
+<div class="simulation-step"><span class="step-number">3</span><div><strong>Apply the new connection</strong><br><span>Set the busbar assignment and recalculate the AC power flow.</span></div></div>
+<div class="flow-arrow">&darr;</div>
+<div class="simulation-step"><span class="step-number">4</span><div><strong>Record the result</strong><br><span>Measure line loading, calculate the reward, and move to the next five-minute step.</span></div></div>
+</div>
+
+The AC power-flow calculation produces voltages, power flows, and line currents. The line
+current is divided by its thermal limit to obtain $\rho_i$. The controller then receives a
+smaller observation vector containing the information selected for learning.
+
+::: {.state-table}
+| DRL input | Values | Purpose |
+|---|---:|---|
+| Line-loading ratio $\rho_i$ | 20 | Identifies lines near or above their limits. |
+| Active line flow $P_i^{\mathrm{or}}$ | 20 | Describes active power at each line's origin end. |
+| Active load $P_j^{\mathrm{load}}$ | 11 | Describes current demand. |
+| Active generation $P_k^{\mathrm{gen}}$ | 6 | Describes current production. |
+| Line status | 20 | Identifies connected lines. |
+| Overload duration | 20 | Records how long each line has been overloaded. |
+| Line cooldown | 20 | Shows when each line can be operated again. |
+| Time of day and day of week | 4 | Describes the position in the daily and weekly cycle. |
+:::
+
+Here, $i$ indexes lines, $j$ loads, and $k$ generators.
+
+This gives 121 input values. The current DRL input does not include the complete busbar
+assignment vector $\mathbf{z}_{\mathrm{topo}}$. This missing information becomes important
+when interpreting repeated actions.
+
+### How is a decision rewarded?
+
+In simple terms, the controller receives a positive value for keeping the grid alive and
+penalties for approaching a line limit, exceeding a line limit, making an unnecessary
+switch, requesting an invalid action, or reaching blackout.
+
+::: {.callout-note collapse="true" title="Technical detail: complete reward function"}
+All learning-based controllers use the same reward:
+
+$$
+\begin{aligned}
+r_t ={}& 1
+-5\sum_i[\max(\rho_i-0.9,0)]^2
+-20\sum_i[\max(\rho_i-1,0)]^2 \\
+&-0.05I_{\mathrm{switch}}
+-0.5I_{\mathrm{invalid}}
+-100I_{\mathrm{blackout}}.
+\end{aligned}
+$$
+
+The loading terms use the state produced by the new power-flow calculation.
+$I_{\mathrm{switch}}$, $I_{\mathrm{invalid}}$, and $I_{\mathrm{blackout}}$ are event
+indicators: each equals 1 when that event occurs and 0 otherwise. The numerical weights
+are project settings, not physical constants or universal power-system standards.
+:::
+
+## 5. Where did the 21 actions come from?
+
+Testing every possible topology at every five-minute step would be expensive. The action
+list was therefore prepared once before training:
+
+::: {.selection-flow}
+```{mermaid}
+flowchart TB
+    A[178 possible topology actions] --> B[20 stressed training states]
+    B --> C[108 actions near heavily loaded lines]
+    C --> D[Keep the best 20]
+    D --> E[Add A0: Do-Nothing]
+    E --> F[21 final actions]
+```
+:::
+
+Only training chronics were used. The grid first followed Do-Nothing until 20 time steps
+with at least one line above the 90% warning level were found. At each such state, the
+three most heavily loaded lines were identified. Actions at the endpoint substations of
+those lines were simulated one step ahead. This filter left 108 of the original 178
+actions. The 20 actions that most often and most strongly reduced grid stress were kept;
+A0 was then added.
+
+This shortcut saves computation, but it may miss a useful action at a more distant
+substation. A distant topology change can still affect flows throughout a connected grid.
+
+::: {.callout-note collapse="true" title="Technical detail: counting and ranking the actions"}
+For substation $s$, let $n_s$ be its number of connected elements and $m_s$ its number of
+line endpoints. Valid two-busbar assignments are counted by
+
+$$
+C_s=2^{n_s-1}-2^{n_s-m_s}+1.
+$$
+
+Grid2Op returns these assignments as actions only when $C_s\geq2$. Summing the returned
+actions over the 14 substations gives 178 candidates.
+
+For a simulated candidate, grid stress was measured as
+
+$$
+J=\max_i(\rho_i)+5\sum_i\max(\rho_i-1,0)^2,
+$$
+
+and its one-step improvement was
+
+$$
+\Delta J=\max(J_{\mathrm{before}}-J_{\mathrm{after}},0).
+$$
+
+A larger $\Delta J$ means a larger reduction in one-step grid stress. Actions were ranked
+first by how often they reduced $J$ and then by their mean improvement.
+:::
+
+### The final action catalogue
+
+::: {.figure-panel}
+![](images/case14_action_catalogue.png){fig-alt="The 20 selected Case14 topology actions and their training-only ranking scores" width="100%"}
+:::
+
+Blue and orange cells show devices assigned to Busbar 1 and Busbar 2. Grey cells indicate
+that the action does not affect that substation. A0 changes nothing. A1–A20 set a specified
+busbar arrangement; they are set-point commands rather than toggle commands. Repeating an
+already-active setting is a nonzero request but causes no new physical switch.
+
+::: {.callout-note collapse="true" title="Technical detail: all 21 actions"}
 | Action | Substation | Devices assigned to Busbar 2 |
 |---:|---:|---|
 | A0 | — | Do-Nothing; no topology change |
@@ -261,87 +341,35 @@ substation are explicitly assigned to Busbar 1.
 | A14 | S5 | Gen3, L7, L17 |
 | A15 | S4 | L17, L4 |
 | A16 | S4 | L17, L1, L6 |
-| A17 | S12 | Empty; restore all S12 devices to Busbar 1 |
-| A18 | S5 | Empty; restore all S5 devices to Busbar 1 |
-| A19 | S4 | Empty; restore all S4 devices to Busbar 1 |
-| A20 | S1 | Empty; restore all S1 devices to Busbar 1 |
+| A17 | S12 | Restore all S12 devices to Busbar 1 |
+| A18 | S5 | Restore all S5 devices to Busbar 1 |
+| A19 | S4 | Restore all S4 devices to Busbar 1 |
+| A20 | S1 | Restore all S1 devices to Busbar 1 |
+:::
 
-These are set-point actions rather than toggle commands. Repeating an action after its
-target topology is already active produces another nonzero action request but no new
-physical switch.
+## 6. Which controllers were compared?
 
-## Methods compared
+All controllers choose from the same 21 actions. They differ only in how they make that
+choice.
 
-<div class="method-grid">
-<div class="method-card"><strong>DQN</strong><span>Value-based DRL baseline</span></div>
-<div class="method-card"><strong>Double DQN</strong><span>Double-estimator DQN variant</span></div>
-<div class="method-card"><strong>Dueling DQN</strong><span>Dueling value–advantage architecture</span></div>
-<div class="method-card"><strong>PPO</strong><span>Policy-optimization method</span></div>
-<div class="method-card"><strong>A2C</strong><span>Actor–critic method</span></div>
-<div class="method-card"><strong>Dueling Double DQN</strong><span>Combined DQN variant</span></div>
-<div class="method-card baseline"><strong>Greedy</strong><span>Non-learning baseline</span></div>
-<div class="method-card baseline"><strong>Do-Nothing</strong><span>No-control baseline</span></div>
-</div>
+| Controller | Simple explanation |
+|---|---|
+| **Do-Nothing** | Always selects A0. It shows what happens without active control. |
+| **Greedy** | When the grid is stressed, simulates all 21 actions and chooses the best immediate result. |
+| **DQN** | Learns an expected long-term score for each action. |
+| **Double DQN** | Uses separate action selection and evaluation to reduce optimistic value estimates. |
+| **Dueling DQN** | Separately learns how good the current state is and which action is better. |
+| **Dueling Double DQN** | Combines the Double and Dueling changes. |
+| **PPO** | Learns the probability of choosing each action and limits large policy updates. |
+| **A2C** | Learns an action policy and a state-value estimate together. |
 
-## Shared reward and experimental settings
+Greedy is not a DRL method. It calls the simulator repeatedly during operation, which can
+make it safe but slow. The DRL methods spend time learning beforehand and then select an
+action with one neural-network calculation.
 
-All learning-based controllers receive the same reward after each grid action. The reward
-is defined in this project rather than supplied by Grid2Op:
-
-$$
-\begin{aligned}
-r_t ={}& 1
--5\sum_i[\max(\rho_i-0.9,0)]^2
--20\sum_i[\max(\rho_i-1,0)]^2 \\
-&-0.05I_{\mathrm{switch}}
--0.5I_{\mathrm{invalid}}
--100I_{\mathrm{blackout}}.
-\end{aligned}
-$$
-
-Here, $\rho_i$ is the loading ratio of line $i$. The first term rewards each surviving
-five-minute step. Loading above 90% receives a warning penalty, loading above 100%
-receives an additional penalty, and actual switching, invalid actions, and blackout are
-penalized separately.
-
-| Reward parameter | Value | Purpose |
-|---|---:|---|
-| Survival reward | 1.0 | Reward one safe five-minute step |
-| Warning threshold | 0.90 | Start discouraging operation near the thermal limit |
-| Warning weight | 5.0 | Control the penalty for $\rho>0.9$ |
-| Overload weight | 20.0 | Add a stronger penalty for $\rho>1$ |
-| Switching weight | 0.05 | Discourage unnecessary physical switching |
-| Invalid-action penalty | 0.5 | Penalize illegal or ambiguous commands |
-| Blackout penalty | 100 | Strongly penalize terminal grid failure |
-
-These weights were selected heuristically to express the priority
-`blackout prevention > overload mitigation > fewer switching operations`. They are not
-physical constants or proven optimal values. A reward-sensitivity study is therefore
-needed before making a general claim about the best weighting.
-
-The common experiment uses 500,000 training steps, a maximum episode length of 2,016
-steps, a thermal-limit scale of 1.05, and a fixed 21-action catalogue. The chronics are
-split into 70% training, 15% validation, and 15% test sets using split seed 2026. Training
-seed 0 is used for the reported preliminary models. The best checkpoint is selected on
-ten validation episodes every 50,000 training steps.
-
-## How each controller makes decisions
-
-### Do-Nothing
-
-Do-Nothing always selects A0:
-
-$$a_t=A0.$$
-
-It has no network, training objective, or learning hyperparameters. Its reported reward
-is still calculated with the common environment reward. It measures how often the grid
-can complete seven days without active topology control.
-
-### Greedy
-
-Greedy is a model-based, one-step controller rather than a DRL method. If the current
-maximum loading is no greater than 0.90, it selects A0. Otherwise, it uses Grid2Op to
-simulate each of the 21 actions one step ahead and minimizes
+::: {.callout-note collapse="true" title="Technical detail: how Greedy chooses an action"}
+If the maximum loading is at most 0.90, Greedy chooses A0. Otherwise, it simulates every
+candidate and minimizes
 
 $$
 J(s_t,a)=\max_i\rho_{i,t+1}
@@ -349,326 +377,73 @@ J(s_t,a)=\max_i\rho_{i,t+1}
 +0.01I(a\ne A0).
 $$
 
-An illegal or immediately terminal simulation receives an additional cost of 1,000.
-The Greedy score $J$ is used only to select an action; the resulting episode is evaluated
-with the same environment reward as every other controller.
-
-#### Greedy decision score versus common reward
-
-The two quantities have different roles. At each five-minute step, Greedy simulates the
-candidate actions, calculates $J(s_t,a)$ for each simulation, and executes the action with
-the lowest score:
-
-$$
-a_t=\arg\min_a J(s_t,a).
-$$
-
-The common reward does **not** participate in this choice. It is calculated only after
-the selected action has been executed in the environment. The step rewards are then
-summed to report the final episode reward and to compare Greedy with the other methods.
-Greedy does not use these rewards to update a model.
-
-```{mermaid}
-flowchart LR
-    A[Current grid state] --> B[Simulate the 21 actions]
-    B --> C[Calculate internal score J]
-    C --> D[Execute the action with minimum J]
-    D --> E[Calculate the common reward]
-    E --> F[Accumulate the reported episode reward]
-```
-
-| Quantity | Determines the Greedy action? | Used in the reported episode reward? |
-|---|:---:|:---:|
-| Internal score $J$ | Yes | No |
-| Common environment reward $r_t$ | No | Yes |
-
-This distinction also separates Greedy from the DRL agents. Greedy directly minimizes a
-one-step power-flow score, whereas DQN, PPO, and A2C use the common reward during training
-to learn a policy that seeks higher discounted return.
-
-| Greedy parameter | Value | Purpose |
-|---|---:|---|
-| Activation threshold | 0.90 | Avoid simulations while the grid is safely loaded |
-| Look-ahead horizon | 1 step | Predict the next five-minute state |
-| Candidate actions | 21 | Test the shared action catalogue |
-| Overload weight | 5.0 | Prefer actions that reduce overload |
-| Nonzero-action cost | 0.01 | Prefer A0 when two actions have similar effects |
-| Illegal/terminal cost | 1,000 | Reject unsafe simulated actions |
-
-### DQN family
-
-DQN learns the expected discounted return of each state-action pair:
-
-$$Q(s_t,a_t)=\mathbb{E}\left[\sum_{k=0}^{\infty}\gamma^k r_{t+k}\right].$$
-
-At evaluation, the network outputs 21 Q-values and selects the largest.
-
-#### Online and Target networks
-
-Every DQN variant in this study contains two Q-networks. They are not two separate agents.
-They are two copies of the same network architecture with different roles:
-
-| Network | Main role | How it changes |
-|---|---|---|
-| **Online network** | Select actions and learn $Q_{\mathrm{online}}(s,a)$ | Updated by gradient descent during training |
-| **Target network** | Provide a stable value for the learning target | Held fixed, then replaced by the Online weights every 2,000 steps |
-
-The Online network changes frequently. If it were also used as a continuously changing
-target, learning could become unstable. The delayed Target network makes the target value
-more stable. During evaluation, only the Online network is needed to select an action:
-
-$$
-a_t=\arg\max_a Q_{\mathrm{online}}(s_t,a).
-$$
-
-```{mermaid}
-flowchart LR
-    S[Current state] --> O[Online network]
-    O --> A[Select one of 21 actions]
-    O --> L[Huber-loss update]
-    T[Target network] --> L
-    O -. copy weights every 2,000 steps .-> T
-```
-
-Standard DQN uses the target
-
-$$
-y_t=r_t+\gamma(1-d_t)\max_{a'}Q_{\mathrm{target}}(s_{t+1},a'),
-$$
-
-and minimizes the Huber loss between $Q_{\mathrm{online}}(s_t,a_t)$ and $y_t$.
-
-Double DQN lets the online network select the next action and the target network evaluate
-it:
-
-$$
-a^*=\arg\max_{a'}Q_{\mathrm{online}}(s_{t+1},a'),\qquad
-y_t=r_t+\gamma(1-d_t)Q_{\mathrm{target}}(s_{t+1},a^*).
-$$
-
-Dueling DQN changes the output architecture to
-
-$$
-Q(s,a)=V(s)+A(s,a)-\frac{1}{21}\sum_{a'}A(s,a'),
-$$
-
-where $V(s)$ measures the value of the grid state and $A(s,a)$ measures the relative
-advantage of each action. Dueling Double DQN combines this architecture with the Double
-DQN target.
-
-All four DQN variants use both networks. Standard DQN and Dueling DQN use the Target
-network to find the largest next-state Q-value. Double DQN and Dueling Double DQN use the
-Online network to select the next action and the Target network to evaluate that action.
-In the Dueling variants, both networks use the same value--advantage architecture. PPO and
-A2C do not use this Online--Target Q-network pair; they instead use Actor and Critic
-networks.
-
-| DQN-family parameter | Value | Purpose |
-|---|---:|---|
-| Hidden layers | [128, 128], ReLU | Map the observation to 21 action values |
-| Learning rate | 0.0001 | Set the Adam optimizer update size |
-| Discount factor $\gamma$ | 0.99 | Control the importance of future rewards |
-| Replay-buffer size | 100,000 | Store past transitions for reuse |
-| Batch size | 128 | Number of replay samples per update |
-| Learning starts | 5,000 steps | Fill the replay buffer before learning |
-| Training frequency | Every 4 steps | Control network-update frequency |
-| Target update interval | 2,000 steps | Copy online weights to the target network |
-| Gradient limit | 10.0 | Reduce unstable gradient updates |
-| Exploration $\epsilon$ | 1.0 to 0.05 | Move from random exploration to learned actions |
-| Exploration decay | 100,000 steps | Set how quickly $\epsilon$ decreases |
-| Loss | Huber loss | Reduce sensitivity to very large temporal-difference errors |
-
-The four variants use the same settings. They differ only in the Double and Dueling
-switches:
-
-| Method | Double target | Dueling architecture |
-|---|:---:|:---:|
-| DQN | No | No |
-| Double DQN | Yes | No |
-| Dueling DQN | No | Yes |
-| Dueling Double DQN | Yes | Yes |
-
-### PPO
-
-PPO is an on-policy actor--critic method. The actor outputs a probability for each of the
-21 actions, while the critic estimates $V(s)$. Generalized advantage estimation uses
-$\gamma=0.99$ and $\lambda=0.95$. PPO limits each policy update with
-
-$$
-L_{\mathrm{clip}}=
-\mathbb{E}\left[
-\min\left(r_t(\theta)\hat A_t,
-\operatorname{clip}(r_t(\theta),0.8,1.2)\hat A_t\right)
-\right],
-$$
-
-where $r_t(\theta)$ is the new-to-old action-probability ratio. Its optimization combines
-the clipped policy objective, a value loss, and an entropy bonus.
-
-| PPO parameter | Value | Purpose |
-|---|---:|---|
-| Hidden layers | [128, 128] | Build the actor and critic networks |
-| Learning rate | 0.0003 | Set the Adam update size |
-| Discount factor $\gamma$ | 0.99 | Weight future rewards |
-| GAE $\lambda$ | 0.95 | Balance bias and variance in advantage estimates |
-| Rollout length | 1,024 steps | Collect on-policy data before updating |
-| Batch size | 128 | Split each rollout into mini-batches |
-| Epochs per rollout | 10 | Reuse each rollout for ten optimization passes |
-| Clip range | 0.20 | Limit large policy changes |
-| Entropy coefficient | 0.01 | Encourage action exploration |
-| Value-loss coefficient | 0.5 | Weight critic learning |
-| Gradient limit | 0.5 | Stabilize optimization |
-| Advantage normalization | Enabled | Standardize advantages before updating |
-
-### A2C
-
-A2C is also an actor--critic method, but it has no PPO clipping and updates after much
-shorter rollouts. Its objective can be summarized as
-
-$$
-L_{\mathrm{A2C}}=
--\mathbb{E}[\log\pi(a_t|s_t)\hat A_t]
-+0.5L_{\mathrm{value}}-0.01H(\pi).
-$$
-
-| A2C parameter | Value | Purpose |
-|---|---:|---|
-| Hidden layers | [128, 128] | Build the actor and critic networks |
-| Learning rate | 0.0007 | Set the RMSprop update size |
-| Discount factor $\gamma$ | 0.99 | Weight future rewards |
-| GAE $\lambda$ | 0.95 | Control advantage-estimation bias and variance |
-| Rollout length | 20 steps | Update frequently using short trajectories |
-| Entropy coefficient | 0.01 | Encourage exploration |
-| Value-loss coefficient | 0.5 | Weight critic learning |
-| Gradient limit | 0.5 | Stabilize optimization |
-| RMSprop epsilon | $10^{-5}$ | Improve numerical stability |
-| Advantage normalization | Disabled | Use the Stable-Baselines3 A2C default |
-
-## Why did the methods behave differently?
-
-### What the results directly show
-
-| Method | What happened in the current test |
-|---|---|
-| **Greedy** | Completed all 20 scenarios, but needed the most computation time |
-| **Dueling DQN** | Achieved the best completion rate among the learned controllers |
-| **A2C** | Made no real topology changes and produced the same result as Do-Nothing |
-| **Double DQN variants** | Requested many nonzero actions, but few requests changed the physical topology |
-
-These are measured results. The explanations below are possible reasons, not proven facts.
-
-### Possible reasons in simple terms
-
-**Why was Greedy safe but slow?**  
-When the grid became stressed, Greedy used the simulator to try the 21 candidate actions
-before choosing one. This made its decisions reliable, but each decision required many
-extra power-flow calculations.
-
-**Why might Dueling DQN work well?**  
-Dueling DQN learns two questions separately: *Is the current grid state safe or dangerous?*
-and *Which action is better in this state?* Most time steps were already safe, so this
-separation may have helped the network learn when an action was truly needed.
-
-**Why did A2C behave like Do-Nothing?**  
-Most time steps gave a positive survival reward without any switching. A2C may therefore
-have learned that A0 was usually the safest choice. Its short 20-step updates may also
-have made rare dangerous events harder to learn from.
-
-**Why were many Double DQN requests ineffective?**  
-The actions are set-point commands. If an action requests a topology that is already
-active, the request is nonzero but no switch occurs. The DRL input contains line status
-and power-flow measurements, but not the complete Busbar 1/2 assignment (`topo_vect`).
-The agent may therefore repeat an action because it cannot directly see that the requested
-topology is already active.
-
-**Why is Greedy less affected by missing `topo_vect`?**  
-Greedy obtains the full Grid2Op state and simulates each action before execution. It can
-observe the predicted result even when the smaller DRL input does not describe every
-busbar assignment explicitly.
-
-::: {.callout-note title="Measured result versus possible explanation"}
-The benchmark tells us **which method performed better**. It does not yet prove **why**.
-For example, Dueling DQN's design is a reasonable explanation for its result, but the
-current single-seed experiment cannot prove that the Dueling architecture caused the
-improvement.
+This internal score selects the action. It is not the reported episode reward. After the
+chosen action is executed, Greedy is evaluated with the same common reward as every other
+controller.
 :::
 
-### How to check these explanations
+::: {.callout-note collapse="true" title="Technical detail: DQN, PPO, and A2C"}
+DQN learns an action value $Q(s,a)$ and selects the action with the largest value. Every
+DQN variant has an Online network that learns and selects actions and a delayed Target
+network that stabilizes the learning target. Dueling DQN represents
 
-| Question | Simple follow-up test |
-|---|---|
-| Is Dueling DQN consistently better? | Train each method with at least three seeds |
-| Does missing topology information cause repeated requests? | Add `topo_vect` and train again |
-| Is an algorithm stuck on one action? | Count how often it selects A0--A20 |
-| Does a switch actually improve the grid? | Compare maximum $\rho$ before and after each switch |
-| Can repeated commands be reduced? | Mask an already-active action or add a small request penalty |
+$$
+Q(s,a)=V(s)+A(s,a)-\frac{1}{21}\sum_{a'}A(s,a').
+$$
 
-Until these tests are completed, the performance differences are confirmed, but their
-causes should be presented as possible explanations.
+PPO and A2C use an Actor–Critic structure instead. The Actor chooses actions; the Critic
+estimates how good the state is. PPO uses clipped updates to prevent the policy from
+changing too far at once. A2C uses shorter rollouts and more direct updates.
 
-## Evaluation metrics
+The reported models were trained for 500,000 steps. DQN-family networks use two hidden
+layers of 128 units, $\gamma=0.99$, a replay buffer of 100,000 transitions, batch size
+128, and a target update every 2,000 steps. PPO uses 1,024-step rollouts, batch size 128,
+10 epochs, and clip range 0.20. A2C uses 20-step rollouts. These are implementation
+settings, not physical grid parameters.
+:::
 
-The methods are evaluated using six complementary indicators:
+## 7. How was performance measured?
 
-| Metric | Interpretation | Desired direction |
-|---|---|---|
-| **Completion Rate** | Percentage of test episodes completing all 2,016 steps | Higher |
-| **Blackout Rate** | Percentage of episodes ending early because the grid can no longer operate | Lower |
-| **Mean Episode Length** | Average number of operating steps completed | Higher |
-| **Overload-Step Ratio** | Percentage of operating steps with at least one overloaded line | Lower |
-| **Mean Actual Switching Steps** | Average number of time steps in which topology is actually changed | Context dependent |
-| **Mean Inference Time** | Average computation time required to select one action | Lower |
+The test asks whether each controller can survive the complete seven-day scenario while
+avoiding excessive overload and computation.
 
-## Key results
+| Metric | What it answers | Better direction |
+|---|---|:---:|
+| **Completion rate** | How many test episodes reached all 2,016 steps? | Higher |
+| **Blackout rate** | How many episodes ended before seven days? | Lower |
+| **Mean episode length** | How long did the grid operate on average? | Higher |
+| **Overload-step ratio** | In what percentage of operating steps was at least one line above $\rho=1$? | Lower |
+| **Actual switching steps** | How often did the physical topology really change? | Depends on safety |
+| **Inference time** | How long did one action decision take? | Lower |
+
+The comparison uses the same 20 held-out seven-day chronics for every method. The reported
+models use training seed 0, so the results are a preliminary comparison rather than proof
+that one neural architecture is always superior.
+
+## 8. What were the results?
 
 <div class="result-grid">
-<div class="result-card">
-<div class="result-number">100%</div>
-<div class="result-title">Greedy completion rate</div>
-<div class="result-text">Highest security performance in the benchmark.</div>
-</div>
-<div class="result-card">
-<div class="result-number">95%</div>
-<div class="result-title">Dueling DQN completion rate</div>
-<div class="result-text">Best-performing DRL method.</div>
-</div>
-<div class="result-card">
-<div class="result-number">0.055%</div>
-<div class="result-title">Dueling DQN overload ratio</div>
-<div class="result-text">Second lowest overload burden after Greedy.</div>
-</div>
-<div class="result-card">
-<div class="result-number">0.781 ms</div>
-<div class="result-title">Dueling DQN inference time</div>
-<div class="result-text">Sub-millisecond online action selection.</div>
-</div>
+<div class="result-card"><div class="result-number">100%</div><div class="result-title">Greedy completion</div><div class="result-text">Safest method in this test.</div></div>
+<div class="result-card"><div class="result-number">95%</div><div class="result-title">Dueling DQN completion</div><div class="result-text">Best learned controller.</div></div>
+<div class="result-card"><div class="result-number">0.055%</div><div class="result-title">Dueling DQN overload ratio</div><div class="result-text">Second lowest after Greedy.</div></div>
+<div class="result-card"><div class="result-number">0.781 ms</div><div class="result-title">Dueling DQN decision time</div><div class="result-text">Fast online decisions.</div></div>
 </div>
 
 ::: {.figure-panel}
-![](images/performance_metrics.png){fig-alt="Comparison of completion rate, overload burden, and safety-computation trade-off across topology-control methods" width="100%"}
+![](images/performance_metrics.png){fig-alt="Completion, overload, and decision-time comparison across all controllers" width="100%"}
 :::
 
-The figure summarizes three aspects of performance:
+**Panel a — Can the controller finish seven days?** Higher is better. Greedy completed
+all 20 scenarios. Dueling DQN completed 19 and was the strongest DRL method.
 
-**a. Episode completion rate.** Higher is better. Greedy reaches 100%, while
-Dueling DQN is the strongest DRL method at 95%.
+**Panel b — How often was any line overloaded?** Lower is better. Greedy had the lowest
+overload burden, followed by Dueling DQN.
 
-**b. System overload burden.** Lower is better. Greedy has the lowest overload-step
-ratio (0.0446%), followed by Dueling DQN (0.0550%).
+**Panel c — What is the safety–speed trade-off?** Points higher on the chart are safer;
+points farther left decide faster. Greedy was safest but slowest. Dueling DQN provided
+the strongest safety–speed balance among the learned methods.
 
-**c. Safety–computation trade-off.** A favorable method combines high completion rate
-with low inference time. Dueling DQN provides the strongest safety–speed balance among
-the DRL methods, whereas Greedy is safer but substantially slower in this benchmark.
-
-<div class="mini-note">
-<strong>Benchmark note:</strong> the supplied comparison figure reports seed = 0,
-20 fixed held-out seven-day chronics, and 2,016 steps per chronic. The error bars in panel
-(a) are Wilson 95% intervals across chronics and do not represent training-seed uncertainty.
-</div>
-
-## Detailed performance
-
-| Method | Completion Rate | Blackout Rate | Mean Episode Length | Overload-Step Ratio | Mean Actual Switching Steps | Mean Inference Time |
+| Method | Completion | Blackout | Mean steps | Overload ratio | Actual switches | Decision time |
 |---|---:|---:|---:|---:|---:|---:|
 | **Greedy** | **100%** | **0%** | **2016.0** | **0.0446%** | 13.15 | 38.195 ms |
 | **Dueling DQN** | **95%** | **5%** | 1978.4 | **0.0550%** | 15.55 | 0.781 ms |
@@ -679,50 +454,38 @@ the DRL methods, whereas Greedy is safer but substantially slower in this benchm
 | Do-Nothing | 70% | 30% | 1646.3 | 0.0889% | 0 | 0.001 ms |
 | Dueling Double DQN | 10% | 90% | 1045.9 | 0.7371% | 73.25 | 0.743 ms |
 
-## Mechanism-level diagnostic analysis
+## 9. Why did the controllers behave differently?
 
-The aggregate benchmark identifies the strongest methods but does not explain why an
-episode succeeds or fails. A second evaluation therefore recorded one diagnostic row at
-every five-minute step for five representative controllers: Do-Nothing, Greedy, DQN,
-Dueling DQN, and PPO. The log contains the selected action, affected substation, maximum
-line-loading ratio, overloaded-line IDs, actual topology changes, line disconnections,
-illegal-action flags, terminal exceptions, and inference time.
+The results show **what happened**. The explanations below are plausible reasons that
+still need controlled experiments.
 
-### What the 20 test scenarios represent
+### Why was Greedy safe but slow?
 
-Each test scenario is a pre-existing Grid2Op chronic directory containing one seven-day
-sequence of generation and load values. For example, `0851` identifies the folder
-`chronics/0851`; it is a dataset identifier, not a random seed or difficulty score. The
-20 fixed held-out scenarios used here were
+When the grid became stressed, Greedy tried every candidate in the simulator before
+acting. This gave it strong immediate safety information, but required many extra
+power-flow calculations.
 
-```text
-0009, 0033, 0153, 0207, 0275, 0301, 0315, 0411, 0443, 0513,
-0561, 0573, 0685, 0715, 0818, 0851, 0881, 0900, 0903, 0998.
-```
+### Why might Dueling DQN have worked well?
 
-The underlying generation and load trajectories are read from the stored CSV files; they
-are not regenerated during evaluation. All methods start from the same scenario and use
-the same exogenous time series, enabling paired scenario-level comparison.
+Most five-minute states were already safe and many actions had similar effects. Dueling
+DQN separately asks “Is this state generally safe?” and “Which action is better here?”
+That separation may have helped it recognize the smaller number of states that needed a
+useful intervention.
 
-### Scenario outcomes, action efficiency, and terminal failures
+### Why did A2C match Do-Nothing?
 
-::: {.figure-panel}
-![](images/case14_diagnostic_summary.png){fig-alt="Scenario-level completion matrix, nonzero action requests versus actual switching, and terminal failure categories for five Case14 controllers" width="100%"}
-:::
+A2C made no real topology changes. Safe states were common, and the agent could often
+receive a positive survival reward without switching. It may therefore have learned to
+prefer A0. Its short 20-step updates may also have made rare failures harder to learn from.
 
-Panel **a** shows which controllers completed each seven-day chronic. Greedy rescued all
-six Do-Nothing failures. Dueling DQN rescued five without creating a new failure, whereas
-DQN rescued five baseline failures but failed in Scenario 0033, which Do-Nothing completed.
-PPO rescued two baseline failures.
+### Why did some DRL agents request thousands of actions?
 
-Panel **b** distinguishes an **action request** from an **actual switching step**. At each
-five-minute step, the controller selects exactly one of A0–A20. Selecting A1–A20 counts as
-one nonzero request. It counts as an actual switching step only if the network topology or
-line status physically changes after execution. One requested action may set several
-devices within one substation, but the controller cannot request two sequential actions
-within the same five-minute step.
+A1–A20 specify target busbar settings. If a requested setting is already active, the
+request is nonzero but nothing physically changes. The DRL observation does not include
+the full busbar assignment, so an agent may repeatedly request a topology that is already
+present. Greedy is less affected because it simulates the predicted outcome before acting.
 
-| Method | Nonzero requests per episode | Actual switching steps per episode | Request-to-switch effectiveness |
+| Method | Nonzero requests per episode | Actual switching steps | Requests causing a switch |
 |---|---:|---:|---:|
 | Greedy | 13.15 | 13.15 | 100.000% |
 | Dueling DQN | 1959.40 | 15.55 | 0.794% |
@@ -730,125 +493,137 @@ within the same five-minute step.
 | PPO | 1767.75 | 30.00 | 1.697% |
 | Do-Nothing | 0 | 0 | Not applicable |
 
-Request-to-switch effectiveness is defined as
-
-$$
-\eta_{\mathrm{action}} =
-\frac{N_{\mathrm{actual\ switching\ steps}}}
-{N_{\mathrm{nonzero\ requests}}}\times100\%.
-$$
-
-The low DRL values do not mean that multiple actions were executed every five minutes.
-Instead, the learned policies repeatedly selected set-point actions whose target topology
-was already active. The present reward penalizes actual switching, but it does not directly
-penalize a repeated nonzero request that leaves the topology unchanged. Greedy avoids this
-pattern because it selects A0 under low stress and requests a nonzero action only when its
-one-step search selects a physical topology change.
-
-Panel **c** reports the terminal exceptions. Most blackout episodes ended with AC
-power-flow non-convergence. This exception describes how Grid2Op stopped, not necessarily
-the complete initiating mechanism; the preceding overload, disconnection, and action
-sequence must also be examined.
-
-### Representative overload trajectories
-
-::: {.figure-panel}
-![](images/case14_representative_trajectories.png){fig-alt="Maximum line-loading trajectories for Scenarios 0275, 0033, and 0851 with topology-switch and blackout markers" width="100%"}
+::: {.callout-warning title="Result versus explanation"}
+The benchmark confirms that the methods performed differently. It does not yet prove
+that a specific network design caused the difference. Multiple training seeds and
+controlled ablation tests are required.
 :::
 
-Each curve reports the maximum line-loading ratio observed before the next action,
+## 10. Optional diagnostic details
 
-$$
-\rho_{\max,t}=\max_i(\rho_{i,t}).
-$$
+The following analysis is useful for investigating individual failures, but it is not
+required to understand the main comparison.
 
-The red dashed line marks the overload threshold (
-$\rho=1$), circles mark actual topology
-switches, and an `X` marks blackout termination. Scenario 0275 illustrates a baseline
-failure rescued by both DQN variants. Scenario 0033 isolates a DQN-specific failure.
-Scenario 0851 is the hardest example in this subset: only Greedy completed all 2,016 steps.
+::: {.callout-note collapse="true" title="Which 20 test scenarios were used?"}
+The scenario IDs are dataset folder names:
 
-### DQN failure sequence in Scenario 0033
+```text
+0009, 0033, 0153, 0207, 0275, 0301, 0315, 0411, 0443, 0513,
+0561, 0573, 0685, 0715, 0818, 0851, 0881, 0900, 0903, 0998.
+```
 
-The DQN failure classification was taken from the Grid2Op step log rather than inferred
-from the completion curve alone.
+Their stored load and generation values are not regenerated during evaluation. Every
+controller is tested on the same sequences.
+:::
 
-| Step | Selected action | Logged event |
+::: {.callout-note collapse="true" title="Scenario outcomes and action efficiency"}
+![](images/case14_diagnostic_summary.png){fig-alt="Scenario completion, action requests versus real switches, and terminal failure categories" width="100%"}
+
+Panel a shows completion for each scenario. Panel b separates a requested nonzero action
+from a real topology change. Panel c summarizes the terminal exceptions. Most failed
+episodes ended with AC power-flow non-convergence, which describes the final stopping
+event rather than the complete initiating cause.
+:::
+
+::: {.callout-note collapse="true" title="Representative overload trajectories"}
+![](images/case14_representative_trajectories.png){fig-alt="Maximum line-loading trajectories for Scenarios 0275, 0033, and 0851" width="100%"}
+
+The red dashed line is $\rho=1$. Circles mark physical topology switches and an X marks
+episode termination. Scenario 0275 is a baseline failure rescued by the DQN variants.
+Scenario 0033 shows a DQN-specific failure. In Scenario 0851, only Greedy completed all
+2,016 steps.
+:::
+
+::: {.callout-note collapse="true" title="DQN failure in Scenario 0033"}
+| Step | Action | Logged event |
 |---:|---:|---|
 | 1669 | A17 | Line 9 was slightly overloaded; the grid continued operating. |
-| 1670 | A9 | Lines 9 and 13 changed to disconnected status; maximum loading rose from approximately 1.00 to 1.86. |
-| 1671 | A2 | Grid2Op rejected the request as illegal because it affected the status of more than one line (`[9, 13]`); the episode did not yet terminate. |
-| 1672 | A2 | The illegal-action warning recurred and the AC power flow failed to converge after ten Newton–Raphson iterations. |
+| 1670 | A9 | Lines 9 and 13 disconnected; maximum loading rose from about 1.00 to 1.86. |
+| 1671 | A2 | Grid2Op rejected the request as illegal; the episode continued. |
+| 1672 | A2 | The warning recurred and the AC power flow failed to converge. |
 
-Across the complete 20-scenario diagnostic run, DQN produced two illegal-action flags,
-both in Scenario 0033. Do-Nothing, Greedy, Dueling DQN, and PPO produced none. An illegal
-request is normally ignored by Grid2Op and therefore should not be interpreted as proof
-that the request alone caused the blackout. A more bounded interpretation is that the grid
-had already entered a severely stressed post-disconnection state, and the repeated illegal
-request failed to provide a feasible recovery action before power-flow non-convergence.
-
-### Overload is not identical to blackout
-
-A line is overloaded when (
-$\rho > 0.90$), but this does not necessarily terminate the episode.
-Grid2Op tracks consecutive overload duration for each line and may disconnect a line after
-the allowed duration, or immediately under sufficiently severe overload. The remaining
-network is then solved again. The episode ends only if the resulting grid can no longer be
-operated, for example because of cascading disconnections, islanding, or power-flow
-non-convergence. This is why Greedy can show a small nonzero overload-step ratio while
-still achieving zero blackouts in the current 20 scenarios.
-
-## Interpretation limits and next validation steps
-
-The mechanism logs deepen the seed-0 comparison, but they do not yet establish that a
-particular neural architecture intrinsically causes the observed ranking. The current
-evidence is limited to one training seed and 20 of approximately 152 held-out test
-chronics. In particular, Dueling DQN's value–advantage decomposition is a plausible reason
-for its strong performance when many actions have similar or redundant effects, but that
-explanation remains a hypothesis until it is tested across multiple seeds and controlled
-ablations.
-
-The next validation stage should therefore:
-
-1. train DQN, Dueling DQN, and PPO with at least seeds 0–2;
-2. evaluate each trained model on the complete fixed test split;
-3. report paired scenario outcomes and confidence intervals;
-4. compare the original policy with an invalid/redundant-action mask or a small repeated-request penalty;
-5. classify failure sequences into persistent overload, protection-driven line loss,
-   illegal action, islanding, and power-flow non-convergence.
-
-## Main findings
-
-::: {.callout-tip title="Takeaway 1 — Best overall security"}
-**Greedy** achieves the highest episode completion rate and the lowest overload burden,
-making it the strongest security benchmark in the current comparison.
+The illegal request should not be treated as proof that it alone caused blackout. The grid
+was already severely stressed after the line disconnections, and the repeated request did
+not provide a feasible recovery before power-flow non-convergence.
 :::
 
-::: {.callout-important title="Takeaway 2 — Best DRL method"}
-**Dueling DQN** is the strongest DRL method, reaching a 95% completion rate and a
-0.0550% overload-step ratio while maintaining sub-millisecond inference time.
+## 11. What can and cannot be concluded?
+
+The current experiment supports three clear statements:
+
+1. Greedy was the safest controller in these 20 test scenarios, but it required much more
+   computation per decision.
+2. Dueling DQN was the strongest DRL controller in this seed-0 comparison.
+3. Several learned policies repeatedly requested already-active topology settings.
+
+It does **not** yet show that Dueling DQN is always the best DRL architecture. The models
+were trained with only one seed, and only 20 of the 152 held-out test chronics were included
+in the reported comparison.
+
+The next experiments should train several seeds, evaluate the complete test split, add
+`topo_vect` to the observation, record action frequencies, and test a mask or penalty for
+redundant requests.
+
+::: {.callout-tip title="Main takeaway"}
+Topology control can reduce overload without adding lines or changing demand. Greedy gave
+the strongest safety result, while Dueling DQN offered the best balance of safety and fast
+online decision making among the learned controllers in this preliminary benchmark.
 :::
 
-::: {.callout-note title="Takeaway 3 — Fast DRL decision making"}
-**DQN** has the lowest inference overhead among the tested DRL methods and requires fewer
-actual topology-switching steps than the other active DRL controllers in the supplied results.
+## 12. Is there still research potential?
+
+**Short answer: yes, but not in a simple comparison of DRL algorithms.** Many researchers
+already study grid topology control, busbar splitting, Grid2Op, and action-space reduction.
+The research question must therefore go beyond applying DQN, PPO, or A2C to Case14.
+
+### What has already been studied?
+
+| Topic | Current position | Relation to this project |
+|---|---|---|
+| Transmission-line switching | A well-established field. [Optimal Transmission Switching](https://ieeexplore.ieee.org/document/4492805/) formulated line-status selection as an optimization problem in 2008. | Changing network topology is not a new idea. |
+| Busbar splitting | Existing optimization methods already use substation busbar splitting to reduce congestion and operating cost. They have been tested on IEEE 14-bus and 118-bus systems. [NREL study](https://www.nrel.gov/docs/fy21osti/78184.pdf) | The physical action used here has already been studied. |
+| Grid2Op and RL control | The L2RPN challenge attracted more than 300 participants and produced several strong learning and search-based controllers. [L2RPN retrospective](https://proceedings.mlr.press/v133/marot21a.html) | Using Grid2Op with RL is now an active research area. |
+| Reducing the RL action space | Existing L2RPN solutions commonly restrict the large topology-action space. [State and Action Factorization](https://arxiv.org/abs/2409.04467) | Reducing 178 actions to a smaller set is not sufficient novelty by itself. |
+| Selecting busbar actions before RL training | A 2024 study used power-flow sensitivity factors to select substation-reconfiguration actions before training an RL controller on an IEEE 14-bus system. [PTDF-based selection study](https://doi.org/10.1016/j.eswa.2024.125017) | This is particularly close to the present action-selection procedure. |
+
+### What is the possible research gap?
+
+The current benchmark fixes the catalogue at 20 topology actions. This number was chosen
+by the experiment design; it was **not** shown to be optimal. Three different questions
+should be separated:
+
+1. **Switching locations:** which substations or equipment terminals should be controllable?
+2. **Action catalogue size:** how many topology configurations should the controller be
+   allowed to choose from?
+3. **Actual operations:** how many physical switching operations should be permitted during
+   one episode?
+
+A useful next study could optimize these three choices together. For example, the same
+controller could be retrained with 5, 10, 20, 30, 50, and 108 candidate actions. The results
+would show how safety, computation, and switching frequency change as more control options
+are added. A further step would select the substations that should have remotely controllable
+switching equipment, instead of assuming that every location is available.
+
+> **Possible research question:** What is the smallest set of controllable switching
+> locations and topology actions that allows a DRL controller to keep the grid safe under
+> changing load and generation conditions?
+
+### Honest assessment
+
+| Scope | Research potential |
+|---|---|
+| Compare standard DRL algorithms on one Case14 experiment | Low; this is mainly a benchmark or teaching example. |
+| Replace the current Top-20 rule with another action-ranking rule | Limited; closely related action-selection methods already exist. |
+| Systematically optimize catalogue size and report the safety--cost trade-off | Moderate; useful if tested with multiple seeds and unseen scenarios. |
+| Jointly select physical switching locations, the action catalogue, and the operating policy | More promising; it connects hardware availability with intelligent operation. |
+
+The last direction is promising, but it should not yet be described as a new method. A more
+complete literature review is needed to check whether the same combined problem has already
+been solved. Any future claim should also be supported by multiple training seeds, larger
+test sets, and preferably more than one grid.
+
+::: {.callout-note title="How this assessment was prepared"}
+This section is a preliminary literature map produced through a ChatGPT-assisted literature
+search and synthesis on 5 September 2026. It is intended to identify relevant research
+directions, not to replace a systematic review.
 :::
-
-::: {.callout-warning title="Takeaway 4 — Policy instability"}
-**Dueling Double DQN** performs poorly in the supplied benchmark, with a 10% completion
-rate, 90% blackout rate, and the highest overload-step ratio, indicating significant
-policy instability in this experiment.
-:::
-
-## Research message
-
-This benchmark demonstrates a clear distinction between **maximum security performance**
-and **fast learned decision making**. Greedy provides the strongest overall security,
-whereas Dueling DQN offers the most competitive DRL balance between episode survival,
-overload mitigation, and online inference speed.
-
----
-
-*This page is structured as a research showcase: **problem → system → method → benchmark
-→ results → findings**. It can be expanded later with additional training seeds,
-hyperparameter ablations, the complete held-out test split, or larger power-grid cases.*

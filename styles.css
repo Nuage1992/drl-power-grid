@@ -172,6 +172,138 @@ thead th {
   background: var(--panel);
 }
 
+.rho-table table,
+.state-table table {
+  width: 100%;
+  margin: 1.25rem auto 1.6rem;
+  table-layout: fixed;
+}
+
+.rho-table table {
+  max-width: 980px;
+}
+
+.rho-table th:nth-child(1),
+.rho-table td:nth-child(1) {
+  width: 18%;
+  font-weight: 700;
+}
+
+.rho-table th:nth-child(2),
+.rho-table td:nth-child(2) {
+  width: 27%;
+  text-align: center;
+}
+
+.rho-table th:nth-child(3),
+.rho-table td:nth-child(3) {
+  width: 55%;
+}
+
+.state-table table {
+  max-width: 1120px;
+}
+
+.state-table th:nth-child(1),
+.state-table td:nth-child(1) {
+  width: 34%;
+}
+
+.state-table th:nth-child(2),
+.state-table td:nth-child(2) {
+  width: 10%;
+  text-align: center;
+  font-weight: 700;
+}
+
+.state-table th:nth-child(3),
+.state-table td:nth-child(3) {
+  width: 56%;
+}
+
+.rho-table tbody tr:nth-child(even),
+.state-table tbody tr:nth-child(even) {
+  background: #fafbfd;
+}
+
+.simulation-flow {
+  max-width: 920px;
+  margin: 1.6rem auto 2rem;
+}
+
+.simulation-step {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: center;
+  gap: 1rem;
+  min-height: 88px;
+  padding: 1rem 1.25rem;
+  border: 1px solid #b9cee3;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  box-shadow: 0 5px 18px rgba(20, 35, 55, .05);
+}
+
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.simulation-step strong {
+  display: inline-block;
+  margin-bottom: .2rem;
+  color: var(--ink);
+  font-size: 1.08rem;
+}
+
+.simulation-step span:not(.step-number) {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.flow-arrow {
+  height: 30px;
+  color: var(--accent);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 30px;
+  text-align: center;
+}
+
+.mermaid {
+  max-width: 1180px;
+  margin: 1.5rem auto 2rem;
+  text-align: center;
+}
+
+.mermaid svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.mermaid .nodeLabel {
+  font-size: 18px !important;
+  line-height: 1.35;
+}
+
+.mermaid .edgeLabel {
+  font-size: 15px !important;
+}
+
+.selection-flow .mermaid {
+  max-width: 680px;
+}
+
 h2 {
   margin-top: 3.2rem;
   padding-bottom: .45rem;
@@ -202,5 +334,10 @@ blockquote {
   .result-grid,
   .method-grid {
     grid-template-columns: 1fr;
+  }
+
+  .rho-table table,
+  .state-table table {
+    table-layout: auto;
   }
 }
